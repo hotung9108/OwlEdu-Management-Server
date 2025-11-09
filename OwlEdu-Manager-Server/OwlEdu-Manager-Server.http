@@ -1,0 +1,6 @@
+@OwlEdu_Manager_Server_HostAddress = http://localhost:5284
+
+GET {{OwlEdu_Manager_Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
