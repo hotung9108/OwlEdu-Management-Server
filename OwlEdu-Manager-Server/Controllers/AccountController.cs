@@ -6,21 +6,19 @@ namespace OwlEdu_Manager_Server.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AccountController :ControllerBase
+    public class AccountController :Controller
     {
         private readonly AccountService _accountService;
         public AccountController(AccountService accountService)
         {
             _accountService = accountService;
         }
-        // GET: api/Account
         [HttpGet]
         public async Task<IActionResult> GetAllAccounts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             var accounts = await _accountService.GetAllAsync(pageNumber, pageSize);
             return Ok(accounts);
         }
-        // GET: api/Account/{id}
         [HttpGet("{id}")]
         public async Task<IActionResult> GetAccountById(string id)
         {
@@ -31,19 +29,17 @@ namespace OwlEdu_Manager_Server.Controllers
             }
             return Ok(account);
         }
-        // POST: api/Account
         [HttpPost]
-        public async Task<IActionResult> AddAccount([FromBody] Account account)
+        public async Task<IActionResult> AddAccount([FromBody] Account newAccount)
         {
-            if (account == null)
+            if (newAccount == null)
             {
-                return BadRequest(new { Message = "Invalid account data." });
+                return BadRequest(new { Message = "Account data is required." });
             }
 
-            await _accountService.AddAsync(account);
-            return CreatedAtAction(nameof(GetAccountById), new { id = account.Id }, account);
+            await _accountService.AddAsync(newAccount);
+            return CreatedAtAction(nameof(GetAccountById), new { id = newAccount.Id }, newAccount);
         }
-        // PUT: api/Account/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateAccount(string id, [FromBody] Account account)
         {
@@ -61,7 +57,6 @@ namespace OwlEdu_Manager_Server.Controllers
             await _accountService.UpdateAsync(account);
             return NoContent();
         }
-        // DELETE: api/Account/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAccount(string id)
         {
@@ -70,21 +65,42 @@ namespace OwlEdu_Manager_Server.Controllers
             {
                 return NotFound(new { Message = "Account not found." });
             }
-
             await _accountService.DeleteAsync(id);
             return NoContent();
         }
-        // GET: api/Account/search?keyword=example&pageNumber=1&pageSize=10
-        //[HttpGet("search")]
-        //public async Task<IActionResult> SearchAccounts([FromQuery] string keyword, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
-        //{
-        //    if (string.IsNullOrWhiteSpace(keyword))
-        //    {
-        //        return BadRequest(new { Message = "Keyword cannot be empty." });
-        //    }
+        [HttpGet("search/string")]
+        public async Task<IActionResult> SearchAccountsByString([FromQuery] string keyword, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                return BadRequest(new { Message = "Keyword cannot be empty." });
+            }
 
-        //    var accounts = await _accountService.GetByKeywordAsync(keyword, pageNumber, pageSize);
-        //    return Ok(accounts);
-        //}
+            var accounts = await _accountService.GetByStringKeywordAsync(keyword, pageNumber, pageSize);
+            return Ok(accounts);
+        }
+        [HttpGet("search/number")]
+        public async Task<IActionResult> SearchAccountsByNumber([FromQuery] string keyword, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                return BadRequest(new { Message = "Keyword cannot be empty." });
+            }
+
+            var accounts = await _accountService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize);
+            return Ok(accounts);
+        }
+
+        [HttpGet("search/datetime")]
+        public async Task<IActionResult> SearchAccountsByDateTime([FromQuery] string keyword, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                return BadRequest(new { Message = "Keyword cannot be empty." });
+            }
+
+            var accounts = await _accountService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize);
+            return Ok(accounts);
+        }
     }
 }
