@@ -12,10 +12,12 @@ var builder = WebApplication.CreateBuilder(args);
 //Environment.GetEnvironmentVariable("")
 DotNetEnv.Env.Load();
 var sqlServerConnection = Environment.GetEnvironmentVariable("SQLSERVERDB_CONNECTION");
+//var oracleConnection = Environment.GetEnvironmentVariable("ORACLEDB_CONNECTION");
 
 builder.Services.AddDbContext<EnglishCenterManagementContext>(options =>
-options.UseSqlServer(sqlServerConnection));
-//var oracleConnection = Environment.GetEnvironmentVariable("ORACLEDB_CONNECTION");
+    options.UseSqlServer(sqlServerConnection));
+//builder.Services.AddDbContext<EnglishCenterManagementContext>(options =>
+//        options.UseOracle(oracleConnection));
 
 //builder.Services.AddScoped(sp => new SqlConnection(sqlServerConnection));
 //builder.Services.AddScoped(sp => new OracleConnection(oracleConnection));

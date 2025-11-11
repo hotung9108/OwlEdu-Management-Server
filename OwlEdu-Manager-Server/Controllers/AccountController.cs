@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using OwlEdu_Manager_Server.DTOs;
 using OwlEdu_Manager_Server.Models;
 using OwlEdu_Manager_Server.Services;
 
@@ -41,9 +42,9 @@ namespace OwlEdu_Manager_Server.Controllers
             return CreatedAtAction(nameof(GetAccountById), new { id = newAccount.Id }, newAccount);
         }
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateAccount(string id, [FromBody] Account account)
+        public async Task<IActionResult> UpdateAccount(string id, [FromBody] AccountDTO accountDTO)
         {
-            if (account == null || id != account.Id)
+            if (accountDTO == null || id != accountDTO.Id)
             {
                 return BadRequest(new { Message = "Invalid account data or mismatched ID." });
             }
@@ -53,6 +54,12 @@ namespace OwlEdu_Manager_Server.Controllers
             {
                 return NotFound(new { Message = "Account not found." });
             }
+
+            //Mapping
+            var account = new Account 
+            {
+                
+            };
 
             await _accountService.UpdateAsync(account);
             return NoContent();
