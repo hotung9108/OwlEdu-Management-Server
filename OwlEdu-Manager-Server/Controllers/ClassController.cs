@@ -14,14 +14,22 @@ namespace OwlEdu_Manager_Server.Controllers
         {
             _classService = classService;
         }
-
+        //GET: api/Class
         [HttpGet]
-        public async Task<IActionResult> GetAllClasses([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetAllClasses([FromQuery] string keyword = "", [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
-            var classes = await _classService.GetAllAsync(pageNumber, pageSize);
-            return Ok(classes);
-        }
+            if (keyword == "")
+            {
+                var classes = await _classService.GetAllAsync(pageNumber, pageSize);
+                return Ok(classes);
+            }
 
+            var keywords = keyword.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var classesKeyword = await _classService.FindAsync(t => keywords.Any(k => t.Name.Contains(k)), pageNumber, pageSize);
+
+            return Ok(classesKeyword);
+        }
+        //GET: api/Class/{id}
         [HttpGet("{id}")]
         public async Task<IActionResult> GetClassById(string id)
         {
@@ -32,7 +40,7 @@ namespace OwlEdu_Manager_Server.Controllers
             }
             return Ok(_class);
         }
-
+        //POST api/Class
         [HttpPost]
         public async Task<IActionResult> AddClass([FromBody] Class _class)
         {
@@ -44,7 +52,7 @@ namespace OwlEdu_Manager_Server.Controllers
             await _classService.AddAsync(_class);
             return CreatedAtAction(nameof(GetClassById), new {id = _class.Id}, _class);
         }
-
+        //PUT: api/Class/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateClass(string id, [FromBody] Class _class)
         {
@@ -62,7 +70,7 @@ namespace OwlEdu_Manager_Server.Controllers
             await _classService.UpdateAsync(_class);
             return NoContent();
         }
-
+        //DELETE: api/Class/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteClass(string id)
         {
