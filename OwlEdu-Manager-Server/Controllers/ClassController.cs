@@ -18,14 +18,14 @@ namespace OwlEdu_Manager_Server.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllClasses([FromQuery] string keyword = "", [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
-            if (keyword == "")
+            if (keyword.Trim() == "")
             {
                 var classes = await _classService.GetAllAsync(pageNumber, pageSize);
                 return Ok(classes);
             }
 
             var keywords = keyword.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var classesKeyword = await _classService.FindAsync(t => keywords.Any(k => t.Name.Contains(k)), pageNumber, pageSize);
+            var classesKeyword = await _classService.FindAsync(t => keywords.Any(k => t.Name == null ? false : t.Name.Contains(k)), pageNumber, pageSize);
 
             return Ok(classesKeyword);
         }
