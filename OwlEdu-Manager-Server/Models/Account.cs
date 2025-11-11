@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace OwlEdu_Manager_Server.Models;
-
 public partial class Account
 {
     public string Id { get; set; } = null!;
