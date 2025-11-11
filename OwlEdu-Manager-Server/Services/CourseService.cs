@@ -2,7 +2,7 @@
 
 namespace OwlEdu_Manager_Server.Services
 {
-    public class CourseService : BaseService<CourseService>
+    public class CourseService : BaseService<Course>
     {
         public CourseService(EnglishCenterManagementContext context) : base(context)
         {
