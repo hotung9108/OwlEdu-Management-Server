@@ -56,16 +56,10 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new {Message = "Invalid attendance data."});
             }
 
-            var existingAttendance = await GetAttendanceById(attendanceDTO.ScheduleId, attendanceDTO.StudentId);
-            if (existingAttendance != null)
-            {
-                return BadRequest(new { Message = "Invalid attendance data." });
-            }
-
             var attendance = ModelMapUtils.MapBetweenClasses<AttendanceDTO, Attendance>(attendanceDTO);
 
             await _attendanceService.AddAsync(attendance);
-            return CreatedAtAction(nameof(GetAttendanceById), new {attendance.ScheduleId, attendance.StudentId}, attendance);
+            return CreatedAtAction(nameof(GetAttendanceById), new {attendance.ScheduleId, attendance.StudentId}, attendanceDTO);
         }
 
         [HttpPut("{scheduleId}/{studentId}")]

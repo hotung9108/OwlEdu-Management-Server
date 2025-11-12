@@ -56,16 +56,10 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new {Message = "Invalid class assignment data."});
             }
 
-            var existingCa = await GetClassAssignmentById(caDTO.ClassId, caDTO.StudentId);
-            if (existingCa !=  null)
-            {
-                return BadRequest(new { Message = "Invalid class assignment data." });
-            }
-
             var ca = ModelMapUtils.MapBetweenClasses<ClassAssignmentDTO, ClassAssignment>(caDTO);
 
             await _classAssignmentService.AddAsync(ca);
-            return Ok(ca);
+            return CreatedAtAction(nameof(GetClassAssignmentById), new {ca.ClassId, ca.StudentId}, caDTO);
         }
 
         [HttpPut("{classId}/{studentId}")]

@@ -59,17 +59,32 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new {Message = "Invalid course data."});
             }
 
-            var existingCourse = await _courseService.GetByIdAsync(courseDTO.Id);
-            if (existingCourse != null)
-            {
-                return BadRequest(new { Message = "Course not found." });
-            }
-
             var course = ModelMapUtils.MapBetweenClasses<CourseDTO, Course>(courseDTO);
+
+            var courses = await _courseService.GetAllAsync(-1, -1, "Id");
+
+            if (courses == null)
+            {
+                course.Id = "KH000";
+            }
+            else
+            {
+                var last = courses.Last();
+
+                int lastestIdNumber = int.Parse(last.Id.Substring(2));
+
+                int newIdNumber = lastestIdNumber + 1;
+
+                string newId = "KH";
+
+                for (int i = 0; i < 3 - newIdNumber.ToString().Length; i++) newId += "0";
+
+                course.Id = newId + newIdNumber.ToString();
+            }
 
             await _courseService.AddAsync(course);
 
-            return CreatedAtAction(nameof(GetCourseById), new {id = course.Id}, course);
+            return CreatedAtAction(nameof(GetCourseById), id = course.Id, courseDTO);
         }
 
         [HttpPut("{id}")]
