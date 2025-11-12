@@ -84,7 +84,7 @@ namespace OwlEdu_Manager_Server.Controllers
 
             await _courseService.AddAsync(course);
 
-            return CreatedAtAction(nameof(GetCourseById), id = course.Id, courseDTO);
+            return CreatedAtAction(nameof(GetCourseById), course.Id, courseDTO);
         }
 
         [HttpPut("{id}")]

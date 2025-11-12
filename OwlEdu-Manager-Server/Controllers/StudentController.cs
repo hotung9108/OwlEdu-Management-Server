@@ -19,7 +19,7 @@ namespace OwlEdu_Manager_Server.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllStudents([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
-            var students = await _studentService.GetAllAsync(pageNumber, pageSize);
+            var students = await _studentService.GetAllAsync(pageNumber, pageSize, "Id");
             var studentResponses = students.Select(student => new StudentResponse
             {
                 Id = student.Id,
