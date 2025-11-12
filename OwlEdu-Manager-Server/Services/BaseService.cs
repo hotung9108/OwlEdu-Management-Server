@@ -7,8 +7,8 @@ namespace OwlEdu_Manager_Server.Services
 {
     public class BaseService<T> : IService<T> where T : class
     {
-        private readonly EnglishCenterManagementContext _context;
-        private readonly DbSet<T> _dbSet;
+        protected readonly EnglishCenterManagementContext _context;
+        protected readonly DbSet<T> _dbSet;
         public BaseService(EnglishCenterManagementContext context)
         {
             _context = context;
