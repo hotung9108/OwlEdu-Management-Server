@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace OwlEdu_Manager_Server.Models;
 
@@ -18,7 +19,7 @@ public partial class Student
     public string? Address { get; set; }
 
     public string? Gender { get; set; }
-
+    //[JsonIgnore]
     public virtual Account? Account { get; set; }
 
     public virtual ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
