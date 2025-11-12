@@ -11,9 +11,5 @@ namespace OwlEdu_Manager_Server.DTOs
         public DateOnly? AssignedDate { get; set; }
 
         public string? Status { get; set; }
-
-        public virtual Class Class { get; set; } = null!;
-
-        public virtual Student Student { get; set; } = null!;
     }
 }
