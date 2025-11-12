@@ -7,5 +7,7 @@ namespace OwlEdu_Manager_Server.Services
         public AccountService(EnglishCenterManagementContext context) : base(context)
         {
         }
+
+
     }
 }
