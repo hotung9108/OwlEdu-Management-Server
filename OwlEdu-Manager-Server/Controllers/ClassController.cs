@@ -16,24 +16,24 @@ namespace OwlEdu_Manager_Server.Controllers
         {
             _classService = classService;
         }
+
         //GET: api/Class
         [HttpGet]
         public async Task<IActionResult> GetAllClasses([FromQuery] string keyword = "", [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             if (keyword.Trim() == "")
             {
-                var classes = await _classService.GetAllAsync(pageNumber, pageSize);
-                return Ok(classes);
+                var classes = await _classService.GetAllAsync(pageNumber, pageSize, "Id");
+                return Ok(classes.Select(ModelMapUtils.MapBetweenClasses<Class, ClassDTO>).ToList());
             }
 
-            var classesByString = _classService.GetByStringKeywordAsync(keyword, pageNumber, pageSize);
-            var classesByNumeric = _classService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize);
-            var classesByDateTime = _classService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize);
+            var classesByString = _classService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var classesByNumeric = _classService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var classesByDateTime = _classService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "Id");
 
             await Task.WhenAll(classesByString, classesByNumeric, classesByDateTime);
 
-            var res = classesByString.Result.Concat(classesByNumeric.Result).Concat(classesByDateTime.Result).DistinctBy(t => t.Id).Select(t => ModelMapUtils.MapBetweenClasses<Class, ClassDTO>(t)).ToList();
-
+            var res = classesByString.Result.Concat(classesByNumeric.Result).Concat(classesByDateTime.Result).DistinctBy(t => t.Id).Select(ModelMapUtils.MapBetweenClasses<Class, ClassDTO>).ToList();
             return Ok(res);
         }
         //GET: api/Class/{id}
@@ -83,6 +83,7 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new {Message = "Class not found." });
             }
 
+            classDTO.Id = id;
             var _class = ModelMapUtils.MapBetweenClasses<ClassDTO, Class>(classDTO);
 
             await _classService.UpdateAsync(_class);

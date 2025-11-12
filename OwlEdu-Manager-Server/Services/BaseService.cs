@@ -2,6 +2,7 @@
 using OwlEdu_Manager_Server.Models;
 using System.Globalization;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace OwlEdu_Manager_Server.Services
 {
@@ -32,13 +33,51 @@ namespace OwlEdu_Manager_Server.Services
         {
             return await _dbSet.Where(predicate).Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
         }
-        public async Task<IEnumerable<T>> GetAllAsync(int pageNumber, int pageSize)
+        public async Task<IEnumerable<T>> GetAllAsync(int pageNumber, int pageSize, params string[] orderByProperties)
         {
-            if (pageNumber == -1)
+            IQueryable<T> query = _dbSet.AsQueryable();
+
+            // ✅ Nếu có danh sách thuộc tính để sắp xếp
+            if (orderByProperties != null && orderByProperties.Length > 0)
             {
-                return await _dbSet.ToListAsync();
+                IOrderedQueryable<T>? orderedQuery = null;
+
+                for (int i = 0; i < orderByProperties.Length; i++)
+                {
+                    string propertyName = orderByProperties[i];
+                    var propertyInfo = typeof(T).GetProperty(propertyName,
+                        BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+
+                    if (propertyInfo == null)
+                        continue; // nếu property không tồn tại thì bỏ qua
+
+                    // tạo biểu thức e => e.PropertyName
+                    var parameter = Expression.Parameter(typeof(T), "e");
+                    var propertyAccess = Expression.Property(parameter, propertyInfo);
+                    var lambda = Expression.Lambda(propertyAccess, parameter);
+
+                    // xác định OrderBy hay ThenBy
+                    string methodName = (i == 0) ? "OrderBy" : "ThenBy";
+
+                    var method = typeof(Queryable)
+                        .GetMethods()
+                        .Where(m => m.Name == methodName && m.GetParameters().Length == 2)
+                        .Single()
+                        .MakeGenericMethod(typeof(T), propertyInfo.PropertyType);
+
+                    orderedQuery = (IOrderedQueryable<T>)method.Invoke(null, new object[] { orderedQuery ?? query, lambda })!;
+                }
+
+                if (orderedQuery != null)
+                    query = orderedQuery;
             }
-            return await _dbSet.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
+
+            if (pageNumber != -1)
+            {
+                query = query.Skip((pageNumber - 1) * pageSize).Take(pageSize);
+            }
+
+            return await query.ToListAsync();
         }
         public async Task UpdateAsync(T entity)
         {
@@ -50,10 +89,10 @@ namespace OwlEdu_Manager_Server.Services
             return await _dbSet.FindAsync(id);
         }
 
-        public async Task<IEnumerable<T>> GetByStringKeywordAsync(string keyword, int pageNumber, int pageSize)
+        public async Task<IEnumerable<T>> GetByStringKeywordAsync(string keyword, int pageNumber, int pageSize, params string[] orderByProperties)
         {
             if (string.IsNullOrWhiteSpace(keyword))return Enumerable.Empty<T>();
-            var data = await _dbSet.ToListAsync();
+            var data = await GetAllAsync(-1, -1, orderByProperties);
             var stringProperties = typeof(T).GetProperties().Where(p => p.PropertyType == typeof(string));
             var filtered = data.Where(entity =>
             {
@@ -72,11 +111,11 @@ namespace OwlEdu_Manager_Server.Services
         }
 
 
-        public async Task<IEnumerable<T>> GetByNumericKeywordAsync(string keyword, int pageNumber, int pageSize)
+        public async Task<IEnumerable<T>> GetByNumericKeywordAsync(string keyword, int pageNumber, int pageSize, params string[] orderByProperties)
         {
             if (string.IsNullOrWhiteSpace(keyword))return Enumerable.Empty<T>();
             if (!decimal.TryParse(keyword, out var numericKeyword))return Enumerable.Empty<T>();
-            var data = await _dbSet.ToListAsync();
+            var data = await GetAllAsync(-1, -1, orderByProperties);
             var numericProperties = typeof(T).GetProperties().Where(p =>
                 p.PropertyType == typeof(int) || p.PropertyType == typeof(int?) ||
                 p.PropertyType == typeof(double) || p.PropertyType == typeof(double?) ||
@@ -98,12 +137,12 @@ namespace OwlEdu_Manager_Server.Services
             });
             return filtered.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
         }
-        public async Task<IEnumerable<T>> GetByDateTimeKeywordAsync(string keyword, int pageNumber, int pageSize)
+        public async Task<IEnumerable<T>> GetByDateTimeKeywordAsync(string keyword, int pageNumber, int pageSize, params string[] orderByProperties)
         {
             if (string.IsNullOrWhiteSpace(keyword))
                 return Enumerable.Empty<T>();
 
-            var data = await _dbSet.ToListAsync();
+            var data = await GetAllAsync(-1, -1, orderByProperties);
 
             var dateProperties = typeof(T).GetProperties().Where(p => p.PropertyType == typeof(DateTime) || p.PropertyType == typeof(DateTime?));
             bool parsed = DateTime.TryParse(keyword, out var keywordDate);

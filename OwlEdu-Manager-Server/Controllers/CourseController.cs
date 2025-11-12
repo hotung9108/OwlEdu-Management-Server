@@ -23,12 +23,12 @@ namespace OwlEdu_Manager_Server.Controllers
         {
             if (keyword.Trim() == "")
             {
-                var courses = await _courseService.GetAllAsync(pageNumber, pageSize);
-                return Ok(courses);
+                var courses = await _courseService.GetAllAsync(pageNumber, pageSize, "Id");
+                return Ok(courses.Select(t => ModelMapUtils.MapBetweenClasses<Course, CourseDTO>(t)).ToList());
             }
 
-            var coursesByString = _courseService.GetByStringKeywordAsync(keyword, pageNumber, pageSize);
-            var coursesByNumeric = _courseService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize);
+            var coursesByString = _courseService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var coursesByNumeric = _courseService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
 
             await Task.WhenAll(coursesByString, coursesByNumeric);
 
@@ -86,6 +86,7 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new { Message = "Course not found." });
             }
 
+            courseDTO.Id = id;
             var course = ModelMapUtils.MapBetweenClasses<CourseDTO, Course>(courseDTO);
 
             await _courseService.UpdateAsync(course);

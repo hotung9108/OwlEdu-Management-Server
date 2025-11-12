@@ -22,11 +22,12 @@ namespace OwlEdu_Manager_Server.Controllers
         {
             if (keyword == "")
             {
-                return Ok(await _classAssignmentService.GetAllAsync(pageNumber, pageSize));
+                var classAssignment = await _classAssignmentService.GetAllAsync(pageNumber, pageSize, "ClassId", "StudentId");
+                return Ok(classAssignment.Select(t => ModelMapUtils.MapBetweenClasses<ClassAssignment, ClassAssignmentDTO>(t)).ToList());
             }
 
-            var classAssignmentByString = _classAssignmentService.GetByStringKeywordAsync(keyword, pageNumber, pageSize);
-            var classAssignmentByDateTime = _classAssignmentService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize);
+            var classAssignmentByString = _classAssignmentService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "ClassId", "StudentId");
+            var classAssignmentByDateTime = _classAssignmentService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "ClassId", "StudentId");
 
             await Task.WhenAll(classAssignmentByString, classAssignmentByDateTime);
 
@@ -81,6 +82,8 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new { Message = "Class assignment not found." });
             }
 
+            caDTO.ClassId = classId;
+            caDTO.StudentId = studentId;
             var ca = ModelMapUtils.MapBetweenClasses<ClassAssignmentDTO, ClassAssignment>(caDTO);
 
             await _classAssignmentService.UpdateAsync(ca);

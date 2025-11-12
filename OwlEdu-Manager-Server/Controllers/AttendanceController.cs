@@ -22,12 +22,12 @@ namespace OwlEdu_Manager_Server.Controllers
         {
             if (keyword == "")
             { 
-                var attendances = await _attendanceService.GetAllAsync(pageNumber, pageSize);
-                return Ok(attendances);
+                var attendances = await _attendanceService.GetAllAsync(pageNumber, pageSize, "ScheduleId", "StudentId");
+                return Ok(attendances.Select(t => ModelMapUtils.MapBetweenClasses<Attendance, AttendanceDTO>(t)).ToList());
             }
 
-            var attendancesByString = _attendanceService.GetByStringKeywordAsync(keyword, pageNumber, pageSize);
-            var attendancesByNumeric = _attendanceService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize);
+            var attendancesByString = _attendanceService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "ScheduleId", "StudentId");
+            var attendancesByNumeric = _attendanceService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "ScheduleId", "StudentId");
 
             await Task.WhenAll(attendancesByString, attendancesByNumeric);
 
@@ -82,6 +82,8 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new {Message = "Attendance not found."});
             }
 
+            attendanceDTO.ScheduleId = scheduleId;
+            attendanceDTO.StudentId = studentId;
             var attendance = ModelMapUtils.MapBetweenClasses<AttendanceDTO, Attendance>(attendanceDTO);
 
             await _attendanceService.UpdateAsync(attendance);

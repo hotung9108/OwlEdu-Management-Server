@@ -17,7 +17,7 @@ namespace OwlEdu_Manager_Server.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllAccounts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
-            var accounts = await _accountService.GetAllAsync(pageNumber, pageSize);
+            var accounts = await _accountService.GetAllAsync(pageNumber, pageSize, "Id");
             return Ok(accounts);
         }
         [HttpGet("{id}")]
