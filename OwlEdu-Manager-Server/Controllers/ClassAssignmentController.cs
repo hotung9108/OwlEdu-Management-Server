@@ -89,22 +89,15 @@ namespace OwlEdu_Manager_Server.Controllers
         }
 
         [HttpDelete("{classId}/{studentId}")]
-        public async Task<IActionResult> DeleteClassAssignment(string classId, string studentId, [FromBody] ClassAssignmentDTO caDTO)
+        public async Task<IActionResult> DeleteClassAssignment(string classId, string studentId)
         {
-            if (classId == null || studentId == null || caDTO == null)
-            {
-                return BadRequest(new { Message = "Invalid class assignment data." });
-            }
-
             var existingCa = await GetClassAssignmentById(classId, studentId);
             if (existingCa == null)
             {
                 return BadRequest(new { Message = "Class assignment not found." });
             }
 
-            var ca = ModelMapUtils.MapBetweenClasses<ClassAssignmentDTO, ClassAssignment>(caDTO);
-
-            await _classAssignmentService.DeleteClassAssignment(classId, studentId);
+            await _classAssignmentService.DeleteAsync(existingCa);
 
             return NoContent();
         }

@@ -91,18 +91,13 @@ namespace OwlEdu_Manager_Server.Controllers
         [HttpDelete("{scheduleId}/{studentId}")]
         public async Task<IActionResult> DeleteAttendance(string scheduleId, string studentId)
         {
-            if (scheduleId == null || studentId == null)
-            {
-                return BadRequest(new { Message = "Invalid attendance data." });
-            }
-
             var existingAttendance = await _attendanceService.GetAttendanceByScheduleIdStudentId(scheduleId, studentId);
             if (existingAttendance == null)
             {
                 return BadRequest(new { Message = "Attendance not found." });
             }
 
-            await _attendanceService.DeleteAttendance(scheduleId, studentId);
+            await _attendanceService.DeleteAsync(existingAttendance);
             return NoContent();
         }
     }

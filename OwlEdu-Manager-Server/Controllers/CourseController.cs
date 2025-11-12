@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using OwlEdu_Manager_Server.DTOs;
 using OwlEdu_Manager_Server.Models;
 using OwlEdu_Manager_Server.Services;
+using OwlEdu_Manager_Server.Utils;
 
 namespace OwlEdu_Manager_Server.Controllers
 {
@@ -24,10 +27,14 @@ namespace OwlEdu_Manager_Server.Controllers
                 return Ok(courses);
             }
 
-            var keywords = keyword.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var coursesKeyword = await _courseService.FindAsync(c => keywords.Any(k => c.Name == null ? false : c.Name.Contains(k)), pageNumber, pageSize);
+            var coursesByString = _courseService.GetByStringKeywordAsync(keyword, pageNumber, pageSize);
+            var coursesByNumeric = _courseService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize);
+
+            await Task.WhenAll(coursesByString, coursesByNumeric);
+
+            var res = coursesByString.Result.Concat(coursesByNumeric.Result).DistinctBy(t => t.Id).Select(t => ModelMapUtils.MapBetweenClasses<Course, CourseDTO>(t)).ToList();
             
-            return Ok(coursesKeyword);
+            return Ok(res);
         }
 
         [HttpGet("{id}")]
@@ -38,25 +45,37 @@ namespace OwlEdu_Manager_Server.Controllers
             {
                 return BadRequest(new {Message = "Course not found."});
             }
-            return Ok(course);  
+
+            var res = ModelMapUtils.MapBetweenClasses<Course, CourseDTO>(course);
+
+            return Ok(res);  
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddCourse([FromBody] Course course)
+        public async Task<IActionResult> AddCourse([FromBody] CourseDTO courseDTO)
         {
-            if (course == null)
+            if (courseDTO == null)
             {
                 return BadRequest(new {Message = "Invalid course data."});
             }
 
+            var existingCourse = await _courseService.GetByIdAsync(courseDTO.Id);
+            if (existingCourse != null)
+            {
+                return BadRequest(new { Message = "Course not found." });
+            }
+
+            var course = ModelMapUtils.MapBetweenClasses<CourseDTO, Course>(courseDTO);
+
             await _courseService.AddAsync(course);
+
             return CreatedAtAction(nameof(GetCourseById), new {id = course.Id}, course);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateCourse(string id, [FromBody] Course course)
+        public async Task<IActionResult> UpdateCourse(string id, [FromBody] CourseDTO courseDTO)
         {
-            if (id == null || course == null)
+            if (id == null || courseDTO == null)
             {
                 return BadRequest(new { Message = "Invalid course data." });
             }
@@ -66,6 +85,8 @@ namespace OwlEdu_Manager_Server.Controllers
             {
                 return BadRequest(new { Message = "Course not found." });
             }
+
+            var course = ModelMapUtils.MapBetweenClasses<CourseDTO, Course>(courseDTO);
 
             await _courseService.UpdateAsync(course);
             return NoContent();
