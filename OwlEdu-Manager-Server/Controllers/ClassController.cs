@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using OwlEdu_Manager_Server.DTOs;
 using OwlEdu_Manager_Server.Models;
 using OwlEdu_Manager_Server.Services;
+using OwlEdu_Manager_Server.Utils;
 
-namespace OwlEdu_Manager_Server.Controllers
+namespace OwlEdu_Manager_Server.Controllers 
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -14,20 +16,25 @@ namespace OwlEdu_Manager_Server.Controllers
         {
             _classService = classService;
         }
+
         //GET: api/Class
         [HttpGet]
         public async Task<IActionResult> GetAllClasses([FromQuery] string keyword = "", [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             if (keyword.Trim() == "")
             {
-                var classes = await _classService.GetAllAsync(pageNumber, pageSize);
-                return Ok(classes);
+                var classes = await _classService.GetAllAsync(pageNumber, pageSize, "Id");
+                return Ok(classes.Select(ModelMapUtils.MapBetweenClasses<Class, ClassDTO>).ToList());
             }
 
-            var keywords = keyword.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var classesKeyword = await _classService.FindAsync(t => keywords.Any(k => t.Name == null ? false : t.Name.Contains(k)), pageNumber, pageSize);
+            var classesByString = _classService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var classesByNumeric = _classService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var classesByDateTime = _classService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "Id");
 
-            return Ok(classesKeyword);
+            await Task.WhenAll(classesByString, classesByNumeric, classesByDateTime);
+
+            var res = classesByString.Result.Concat(classesByNumeric.Result).Concat(classesByDateTime.Result).DistinctBy(t => t.Id).Select(ModelMapUtils.MapBetweenClasses<Class, ClassDTO>).ToList();
+            return Ok(res);
         }
         //GET: api/Class/{id}
         [HttpGet("{id}")]
@@ -38,25 +45,49 @@ namespace OwlEdu_Manager_Server.Controllers
             {
                 return BadRequest(new { Message = "Class not found." });
             }
-            return Ok(_class);
+            var res = ModelMapUtils.MapBetweenClasses<Class, ClassDTO>(_class);
+            return Ok(res);
         }
         //POST api/Class
         [HttpPost]
-        public async Task<IActionResult> AddClass([FromBody] Class _class)
+        public async Task<IActionResult> AddClass([FromBody] ClassDTO classDTO)
         {
-            if (_class == null)
+            if (classDTO == null)
             {
                 return BadRequest(new { Message = "Invalid class data."});
             }
 
+            var _class = ModelMapUtils.MapBetweenClasses<ClassDTO, Class>(classDTO);
+
+            var classes = await _classService.GetAllAsync(-1, -1, "Id");
+
+            if (classes == null)
+            {
+                _class.Id = "LH000000";
+            }
+            else
+            {
+                var last = classes.Last();
+
+                int lastestIdNumber = int.Parse(last.Id.Substring(2));
+
+                int newIdNumber = lastestIdNumber + 1;
+
+                string newId = "LH";
+
+                for (int i = 0; i < 6 - newIdNumber.ToString().Length; i++) newId += "0";
+
+                _class.Id = newId + newIdNumber.ToString();
+            }
+
             await _classService.AddAsync(_class);
-            return CreatedAtAction(nameof(GetClassById), new {id = _class.Id}, _class);
+            return CreatedAtAction(nameof(GetClassById), new {id = _class.Id}, classDTO);
         }
         //PUT: api/Class/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateClass(string id, [FromBody] Class _class)
+        public async Task<IActionResult> UpdateClass(string id, [FromBody] ClassDTO classDTO)
         {
-            if (id == null || _class == null)
+            if (id == null || classDTO == null)
             {
                 return BadRequest(new { Message = "Invalid class data."});
             }
@@ -66,6 +97,9 @@ namespace OwlEdu_Manager_Server.Controllers
             {
                 return BadRequest(new {Message = "Class not found." });
             }
+
+            classDTO.Id = id;
+            var _class = ModelMapUtils.MapBetweenClasses<ClassDTO, Class>(classDTO);
 
             await _classService.UpdateAsync(_class);
             return NoContent();
@@ -80,7 +114,7 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new { Message = "Class not found." });
             }
 
-            await _classService.DeleteAsync(id);
+            await _classService.DeleteAsync(existingClass);
             return NoContent();
         }
     }
