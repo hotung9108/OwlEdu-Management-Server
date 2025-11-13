@@ -84,7 +84,7 @@ namespace OwlEdu_Manager_Server.Controllers
 
             await _courseService.AddAsync(course);
 
-            return CreatedAtAction(nameof(GetCourseById), course.Id, courseDTO);
+            return CreatedAtAction(nameof(GetCourseById), course.Id, ModelMapUtils.MapBetweenClasses<Course, CourseDTO>(course));
         }
 
         [HttpPut("{id}")]
