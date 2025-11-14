@@ -61,7 +61,7 @@ namespace OwlEdu_Manager_Server.Controllers
             var attendance = ModelMapUtils.MapBetweenClasses<AttendanceDTO, Attendance>(attendanceDTO);
 
             await _attendanceService.AddAsync(attendance);
-            return CreatedAtAction(nameof(GetAttendanceById), new {attendance.ScheduleId, attendance.StudentId}, attendanceDTO);
+            return CreatedAtAction(nameof(GetAttendanceById), new {attendance.ScheduleId, attendance.StudentId}, ModelMapUtils.MapBetweenClasses<Attendance, AttendanceDTO>(attendance));
         }
 
         [HttpPut("{scheduleId}/{studentId}")]

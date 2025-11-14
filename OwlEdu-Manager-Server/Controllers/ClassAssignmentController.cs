@@ -61,7 +61,7 @@ namespace OwlEdu_Manager_Server.Controllers
             var ca = ModelMapUtils.MapBetweenClasses<ClassAssignmentDTO, ClassAssignment>(caDTO);
 
             await _classAssignmentService.AddAsync(ca);
-            return CreatedAtAction(nameof(GetClassAssignmentById), new {ca.ClassId, ca.StudentId}, caDTO);
+            return CreatedAtAction(nameof(GetClassAssignmentById), new {ca.ClassId, ca.StudentId}, ModelMapUtils.MapBetweenClasses<ClassAssignment, ClassAssignmentDTO>(ca));
         }
 
         [HttpPut("{classId}/{studentId}")]

@@ -71,9 +71,9 @@ namespace OwlEdu_Manager_Server.Controllers
             }
             else
             {
-                var lastCourse = enrollments.Last();
+                var last = enrollments.Last();
 
-                int lastestIdNumber = int.Parse(lastCourse.Id.Substring(2));
+                int lastestIdNumber = int.Parse(last.Id.Substring(10));
 
                 int newIdNumber = lastestIdNumber + 1;
 
@@ -86,7 +86,7 @@ namespace OwlEdu_Manager_Server.Controllers
 
             await _enrollmentService.AddAsync(enrollment);
 
-            return CreatedAtAction(nameof(GetEnrollmentById), enrollment.Id, enrollmentDTO);
+            return CreatedAtAction(nameof(GetEnrollmentById), enrollment.Id, ModelMapUtils.MapBetweenClasses<Enrollment, EnrollmentDTO>(enrollment));
         }
 
         [HttpPut("{id}")]
@@ -116,7 +116,7 @@ namespace OwlEdu_Manager_Server.Controllers
             var existingEnrollment = await _enrollmentService.GetByIdAsync(id);
             if (existingEnrollment == null)
             {
-                return BadRequest(new {Message = "Enrollment not found."});
+                return BadRequest(new { Message = "Enrollment not found." });
             }
 
             await _enrollmentService.DeleteAsync(existingEnrollment);
