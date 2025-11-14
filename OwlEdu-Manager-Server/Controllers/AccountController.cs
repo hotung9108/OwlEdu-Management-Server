@@ -21,7 +21,7 @@ namespace OwlEdu_Manager_Server.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllAccounts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
-            var accounts = await _accountService.GetAllAsync(pageNumber, pageSize);
+            var accounts = await _accountService.GetAllAsync(pageNumber, pageSize, "Id");
             var accountResponses = accounts.Select(account => new AccountResponse
             {
                 Id = account.Id,
@@ -55,7 +55,7 @@ namespace OwlEdu_Manager_Server.Controllers
                 UpdateAt = account.UpdateAt
             };
 
-            return Ok(accountResponse);
+            return Ok(account);
         }
         [HttpPost]
         public async Task<IActionResult> AddAccount([FromBody] AccountRequest accountRequest)

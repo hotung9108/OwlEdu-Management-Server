@@ -81,7 +81,7 @@ namespace OwlEdu_Manager_Server.Controllers
             }
 
             await _classService.AddAsync(_class);
-            return CreatedAtAction(nameof(GetClassById), new {id = _class.Id}, classDTO);
+            return CreatedAtAction(nameof(GetClassById), new {id = _class.Id}, ModelMapUtils.MapBetweenClasses<Class, ClassDTO>(_class));
         }
         //PUT: api/Class/{id}
         [HttpPut("{id}")]
