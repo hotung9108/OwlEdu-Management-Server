@@ -15,6 +15,7 @@
             services.AddScoped<ScheduleService>();
             services.AddScoped<ScoreService>();
             services.AddScoped<TeacherService>();
+            services.AddScoped<LoginService>();
             return services;
         }
     }
