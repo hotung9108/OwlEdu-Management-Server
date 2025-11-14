@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using OwlEdu_Manager_Server.DTOs;
 using OwlEdu_Manager_Server.Models;
@@ -6,6 +7,7 @@ using OwlEdu_Manager_Server.Services;
 
 namespace OwlEdu_Manager_Server.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class TeacherController : Controller

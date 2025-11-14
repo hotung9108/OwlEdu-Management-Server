@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using OwlEdu_Manager_Server.DTOs;
 using OwlEdu_Manager_Server.Models;
 using OwlEdu_Manager_Server.Services;
 
 namespace OwlEdu_Manager_Server.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class StudentController :ControllerBase
@@ -183,7 +185,39 @@ namespace OwlEdu_Manager_Server.Controllers
             await _studentService.UpdateAsync(existingStudent);
             return NoContent();
         }
+        //[HttpGet("by-account/{accountId}")]
+        //public async Task<IActionResult> GetStudentByAccountId(string accountId)
+        //{
+        //    var student = await _studentService.GetStudentByAccountIdAsync(accountId);
+        //    var account = await _accountService.GetByIdAsync(accountId);
+        //    if (student == null)
+        //    {
+        //        return NotFound(new { Message = "Student not found for the given account ID." });
+        //    }
 
+        //    var studentResponse = new StudentDetailResponse
+        //    {
+        //        Id = student.Id,
+        //        FullName = student.FullName,
+        //        BirthDate = student.BirthDate,
+        //        PhoneNumber = student.PhoneNumber,
+        //        Address = student.Address,
+        //        Gender = student.Gender,
+        //        accountResponse = student.Account != null ? new AccountResponse
+        //        {
+        //            Id = accountId,
+        //            Username = account.Username,
+        //            Avatar = account.Avatar,
+        //            Role = account.Role,
+        //            Status = account.Status,
+        //            Email = account.Email,
+        //            CreatedAt = account.CreatedAt,
+        //            UpdateAt = account.UpdateAt
+        //        } : null
+        //    };
+
+        //    return Ok(studentResponse);
+        //}
         //public StudentController(StudentService studentService)
         //{
         //    _studentService = studentService;

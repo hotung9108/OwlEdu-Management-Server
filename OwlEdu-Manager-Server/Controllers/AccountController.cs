@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using OwlEdu_Manager_Server.DTOs;
 using OwlEdu_Manager_Server.Models;
 using OwlEdu_Manager_Server.Services;
 
 namespace OwlEdu_Manager_Server.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class AccountController :Controller
@@ -35,28 +37,28 @@ namespace OwlEdu_Manager_Server.Controllers
             });
             return Ok(accountResponses);
         }
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetAccountById(string id)
-        {
-            var account = await _accountService.GetByIdAsync(id);
-            if (account == null)
-            {
-                return NotFound(new { Message = "Account not found." });
-            }
-            var accountResponse = new AccountResponse
-            {
-                Id = account.Id,
-                Username = account.Username,
-                Avatar = account.Avatar,
-                Role = account.Role,
-                Status = account.Status,
-                Email = account.Email,
-                CreatedAt = account.CreatedAt,
-                UpdateAt = account.UpdateAt
-            };
+        //[HttpGet("{id}")]
+        //public async Task<IActionResult> GetAccountById(string id)
+        //{
+        //    var account = await _accountService.GetByIdAsync(id);
+        //    if (account == null)
+        //    {
+        //        return NotFound(new { Message = "Account not found." });
+        //    }
+        //    var accountResponse = new AccountResponse
+        //    {
+        //        Id = account.Id,
+        //        Username = account.Username,
+        //        Avatar = account.Avatar,
+        //        Role = account.Role,
+        //        Status = account.Status,
+        //        Email = account.Email,
+        //        CreatedAt = account.CreatedAt,
+        //        UpdateAt = account.UpdateAt
+        //    };
 
-            return Ok(account);
-        }
+        //    return Ok(account);
+        //}
         [HttpPost]
         public async Task<IActionResult> AddAccount([FromBody] AccountRequest accountRequest)
         {
@@ -89,20 +91,6 @@ namespace OwlEdu_Manager_Server.Controllers
                 a => a.Id.StartsWith("U"), 1, int.MaxValue);
             int maxAccountSequence = existingAccounts.Select(a => int.TryParse(a.Id.Substring(1), out var num) ? num : 0).DefaultIfEmpty(0).Max();
             newAccountId = $"U{(maxAccountSequence + 1):D9}";
-            //string username;
-            //if (accountRequest.Role?.ToLower() == "student" && accountRequest.StudentRequest != null)
-            //{
-            //    username = string.Join("", accountRequest.StudentRequest.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(word => word[0])).ToLower();
-
-            //}
-            //else if(accountRequest.Role?.ToLower() == "teacher" && accountRequest.TeacherRequest != null)
-            //{
-            //    username = string.Join("", accountRequest.TeacherRequest.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(word => word[0])).ToLower();
-            //}
-            //else
-            //{
-            //    username = accountRequest.Username;
-            //}
             var newAccount = new Account
             {
                 Id = newAccountId,
@@ -177,7 +165,7 @@ namespace OwlEdu_Manager_Server.Controllers
                 CreatedAt = newAccount.CreatedAt,
                 UpdateAt = newAccount.UpdateAt
             };
-            return CreatedAtAction(nameof(GetAccountById), new { id = newAccount.Id }, accountResponse);
+            return CreatedAtAction(nameof(GetDetailAccountById), new { id = newAccount.Id }, accountResponse);
         }
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateAccount(string id, [FromBody] AccountRequest accountRequest)
@@ -212,6 +200,91 @@ namespace OwlEdu_Manager_Server.Controllers
             }
             await _accountService.DeleteAsync(id);
             return NoContent();
+        }
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetDetailAccountById(string id)
+        {
+            var account = await _accountService.GetByIdAsync(id);
+            if (account == null)
+            {
+                return NotFound(new { Message = "Account not found for the given account ID." });
+            }
+
+            if (account.Role?.ToLower() == "student")
+            {
+                var student = await _studentService.GetStudentByAccountIdAsync(id);
+                if (student == null)
+                {
+                    return NotFound(new { Message = "Student not found for the given account ID." });
+                }
+                var accountResponse = new AccountDetailResponse
+                {
+                    Id = account.Id,
+                    Username = account.Username,
+                    Avatar = account.Avatar,
+                    Role = account.Role,
+                    Status = account.Status,
+                    Email = account.Email,
+                    CreatedAt = account.CreatedAt,
+                    UpdateAt = account.UpdateAt,
+                    Student = new StudentResponse
+                    {
+                        Id = student.Id,
+                        FullName = student.FullName,
+                        //BirthDate = student.BirthDate,
+                        PhoneNumber = student.PhoneNumber,
+                        Address = student.Address,
+                        Gender = student.Gender
+                    }
+                };
+
+                return Ok(accountResponse);
+            }
+            else if(account.Role?.ToLower() == "teacher")
+            {
+                var teacher = await _teacherService.GetTeacherByAccountIdAsync(id);
+                if(teacher == null)
+                {
+                    return NotFound(new { Message = "Teacher not found for given account ID." });
+                }
+                var accountResponse = new AccountDetailResponse
+                {
+                    Id = account.Id,
+                    Username = account.Username,
+                    Avatar = account.Avatar,
+                    Role = account.Role,
+                    Status = account.Status,
+                    Email = account.Email,
+                    CreatedAt = account.CreatedAt,
+                    UpdateAt = account.UpdateAt,
+                    Teacher = new TeacherResponse
+                    {
+                        Id = teacher.Id,
+                        FullName = teacher.FullName,
+                        Specialization = teacher.Specialization,
+                        Qualification = teacher.Qualification,
+                        PhoneNumber = teacher.PhoneNumber,
+                        Address = teacher.Address,
+                        Gender = teacher.Gender
+                    }
+                };
+                return Ok(accountResponse);
+            }
+            else
+            {
+                var accountResponse = new AccountResponse
+                {
+                    Id = account.Id,
+                    Username = account.Username,
+                    Avatar = account.Avatar,
+                    Role = account.Role,
+                    Status = account.Status,
+                    Email = account.Email,
+                    CreatedAt = account.CreatedAt,
+                    UpdateAt = account.UpdateAt
+                };
+                return Ok(accountResponse);
+            }
         }
         //[HttpGet("search/string")]
         //public async Task<IActionResult> SearchAccountsByString([FromQuery] string keyword, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
@@ -248,4 +321,4 @@ namespace OwlEdu_Manager_Server.Controllers
         //    return Ok(accounts);
         //}
     }
-}
+    }
