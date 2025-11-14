@@ -47,6 +47,19 @@
     //    public List<StudentResponse>? Students { get; set; }
     //    public List<TeacherResponse>? Teachers { get; set; }
     //}
+    public class AccountDetailResponse
+    {
+        public string Id { get; set; } = null!;
+        public string Username { get; set; } = null!;
+        public string? Avatar { get; set; }
+        public string? Role { get; set; }
+        public bool Status { get; set; }
+        public string? Email { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public DateTime? UpdateAt { get; set; }
+        public StudentResponse? Student { get; set; }
+        public TeacherResponse? Teacher { get; set; }
+    }
     public class AccountLoginRequest
     {
         public string Username { get; set; } = null!;

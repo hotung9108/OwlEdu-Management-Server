@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using OwlEdu_Manager_Server.DTOs;
 using OwlEdu_Manager_Server.Models;
 using OwlEdu_Manager_Server.Services;
@@ -6,6 +7,7 @@ using OwlEdu_Manager_Server.Utils;
 
 namespace OwlEdu_Manager_Server.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class ClassAssignmentController : ControllerBase
