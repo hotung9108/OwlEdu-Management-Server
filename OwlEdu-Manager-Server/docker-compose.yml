@@ -9,9 +9,9 @@ services:
       ACCEPT_EULA: "Y"
     ports:
       - "1433:1433"
-    volumes:
-      - sql_data:/var/opt/mssql
-      - ./Init.sql:/docker-entrypoint-initdb.d/Init.sql
+    # volumes:
+    #   - sql_data:/var/opt/mssql
+    #   - ./Init.sql:/docker-entrypoint-initdb.d/Init.sql
     command: >
       /bin/bash -c "
       /opt/mssql/bin/sqlservr &
@@ -34,8 +34,8 @@ services:
       JWT_SECRET: "022HrCMQspJAvUQYdp8m0f89wG5xmllR9rY16W9mm5Y"
     depends_on:
       - sqlserver
-    volumes:
-      - ./.env.docker:/.env.docker
+    # volumes:
+    #   - ./.env.docker:/.env.docker
 
-volumes:
-  sql_data:
+# volumes:
+#   sql_data:
