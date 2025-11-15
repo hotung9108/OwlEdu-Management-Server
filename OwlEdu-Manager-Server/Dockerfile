@@ -10,5 +10,7 @@ WORKDIR /app
 
 COPY --from=build /out .
 
+COPY Init.sql /docker-entrypoint-initdb.d/Init.sql
+
 EXPOSE 8000
 ENTRYPOINT ["dotnet", "OwlEdu-Manager-Server.dll"]
