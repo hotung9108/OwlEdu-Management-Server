@@ -4,7 +4,7 @@
     {
         public static async Task InitializeAsync(EnglishCenterManagementContext db)
         {
-            if (db.Accounts.Any()) return; // Chỉ chạy 1 lần
+            if (db.Accounts.Any()) return; 
 
             var users = new[]
             {
