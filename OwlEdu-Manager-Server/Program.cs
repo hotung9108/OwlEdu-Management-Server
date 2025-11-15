@@ -7,16 +7,10 @@ using Microsoft.IdentityModel.Tokens;
 using Oracle.ManagedDataAccess.Client;
 using OwlEdu_Manager_Server.Models;
 using OwlEdu_Manager_Server.Services;
-using System;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8000";
-builder.WebHost.ConfigureKestrel(options =>
-{
-    options.ListenAnyIP(int.Parse(port));
-});
 // Add services to the container.
 //Environment.GetEnvironmentVariable("")
 DotNetEnv.Env.Load();
@@ -107,11 +101,6 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 var app = builder.Build();
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<EnglishCenterManagementContext>();
-    db.Database.Migrate(); 
-}
 if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
     app.UseSwagger();
