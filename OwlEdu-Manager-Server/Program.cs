@@ -14,8 +14,17 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 //Environment.GetEnvironmentVariable("")
 DotNetEnv.Env.Load();
-var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET");
+var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+string envFile = environment == "Development" ? ".env.development" : ".env.docker";
+
+if (File.Exists(envFile))
+{
+    DotNetEnv.Env.Load(envFile);
+}
+
 var sqlServerConnection = Environment.GetEnvironmentVariable("SQLSERVERDB_CONNECTION");
+var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET");
+//var sqlServerConnection = Environment.GetEnvironmentVariable("SQLSERVERDB_CONNECTION");
 //var oracleConnection = Environment.GetEnvironmentVariable("ORACLEDB_CONNECTION");
 
 builder.Services.AddAuthentication(x =>
@@ -92,12 +101,17 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 var app = builder.Build();
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
+//app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAuthorization();

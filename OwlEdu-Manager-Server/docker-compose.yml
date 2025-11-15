@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: owledu_sql
+    environment:
+      SA_PASSWORD: "StrongPassword123!"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql_data:/var/opt/mssql
+      - ./Init.sql:/docker-entrypoint-initdb.d/Init.sql
+    command: >
+      /bin/bash -c "
+      /opt/mssql/bin/sqlservr &
+      sleep 20 &&
+      /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P StrongPassword123! -C -l 60 -b -i /docker-entrypoint-initdb.d/Init.sql &&
+      wait
+      "
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: owledu_backend
+    ports:
+      - "8000:8000"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: 8000
+      SQLSERVERDB_CONNECTION: "Server=sqlserver,1433;Database=EnglishCenterManagement;User Id=sa;Password=StrongPassword123!;TrustServerCertificate=True;"
+      JWT_SECRET: "022HrCMQspJAvUQYdp8m0f89wG5xmllR9rY16W9mm5Y"
+    depends_on:
+      - sqlserver
+    volumes:
+      - ./.env.docker:/.env.docker
+
+volumes:
+  sql_data:
