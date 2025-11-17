@@ -28,12 +28,10 @@ namespace OwlEdu_Manager_Server.Controllers
                 return Ok(classAssignment.Select(t => ModelMapUtils.MapBetweenClasses<ClassAssignment, ClassAssignmentDTO>(t)).ToList());
             }
 
-            var classAssignmentByString = _classAssignmentService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "ClassId", "StudentId");
-            var classAssignmentByDateTime = _classAssignmentService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "ClassId", "StudentId");
+            var classAssignmentByString = await _classAssignmentService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "ClassId", "StudentId");
+            var classAssignmentByDateTime = await _classAssignmentService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "ClassId", "StudentId");
 
-            await Task.WhenAll(classAssignmentByString, classAssignmentByDateTime);
-
-            var res = classAssignmentByString.Result.Concat(classAssignmentByDateTime.Result).DistinctBy(t => new { t.StudentId, t.ClassId }).Select(t => ModelMapUtils.MapBetweenClasses<ClassAssignment, ClassAssignmentDTO>(t)).ToList();
+            var res = classAssignmentByString.Concat(classAssignmentByDateTime).DistinctBy(t => new { t.StudentId, t.ClassId }).Select(t => ModelMapUtils.MapBetweenClasses<ClassAssignment, ClassAssignmentDTO>(t)).ToList();
 
             return Ok(res);
         }

@@ -28,13 +28,11 @@ namespace OwlEdu_Manager_Server.Controllers
                 return Ok(enrollments);
             }
 
-            var enrollmentByString = _enrollmentService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
-            var enrollmentByNumeric = _enrollmentService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
-            var enrollmentByDateTime = _enrollmentService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var enrollmentByString = await _enrollmentService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var enrollmentByNumeric = await _enrollmentService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var enrollmentByDateTime = await _enrollmentService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "Id");
 
-            await Task.WhenAll(enrollmentByDateTime, enrollmentByNumeric, enrollmentByString);
-
-            var res = enrollmentByString.Result.Concat(enrollmentByString.Result).DistinctBy(t => t.Id).Select(t => ModelMapUtils.MapBetweenClasses<Enrollment, EnrollmentDTO>(t)).ToList();
+            var res = enrollmentByString.Concat(enrollmentByString).DistinctBy(t => t.Id).Select(t => ModelMapUtils.MapBetweenClasses<Enrollment, EnrollmentDTO>(t)).ToList();
 
             return Ok(res);
         }
