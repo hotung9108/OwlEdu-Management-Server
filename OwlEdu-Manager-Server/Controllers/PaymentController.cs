@@ -28,13 +28,11 @@ namespace OwlEdu_Manager_Server.Controllers
                 return Ok(payments);
             }
 
-            var paymentsByString = _paymentService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
-            var paymentsByNumeric = _paymentService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
-            var paymentsByDateTime = _paymentService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var paymentsByString = await _paymentService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var paymentsByNumeric = await _paymentService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var paymentsByDateTime = await _paymentService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "Id");
 
-            await Task.WhenAll(paymentsByString, paymentsByNumeric, paymentsByDateTime);
-
-            var res = paymentsByString.Result.Concat(paymentsByNumeric.Result).Concat(paymentsByDateTime.Result).DistinctBy(t => t.Id).Select(t => ModelMapUtils.MapBetweenClasses<Payment, PaymentDTO>(t)).ToList();
+            var res = paymentsByString.Concat(paymentsByNumeric).Concat(paymentsByDateTime).DistinctBy(t => t.Id).Select(t => ModelMapUtils.MapBetweenClasses<Payment, PaymentDTO>(t)).ToList();
 
             return Ok(res);
         }

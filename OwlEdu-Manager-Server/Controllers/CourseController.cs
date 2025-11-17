@@ -29,12 +29,10 @@ namespace OwlEdu_Manager_Server.Controllers
                 return Ok(courses.Select(t => ModelMapUtils.MapBetweenClasses<Course, CourseDTO>(t)).ToList());
             }
 
-            var coursesByString = _courseService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
-            var coursesByNumeric = _courseService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var coursesByString = await _courseService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var coursesByNumeric = await _courseService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
 
-            await Task.WhenAll(coursesByString, coursesByNumeric);
-
-            var res = coursesByString.Result.Concat(coursesByNumeric.Result).DistinctBy(t => t.Id).Select(t => ModelMapUtils.MapBetweenClasses<Course, CourseDTO>(t)).ToList();
+            var res = coursesByString.Concat(coursesByNumeric).DistinctBy(t => t.Id).Select(t => ModelMapUtils.MapBetweenClasses<Course, CourseDTO>(t)).ToList();
             
             return Ok(res);
         }
