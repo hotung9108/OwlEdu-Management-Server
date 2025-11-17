@@ -29,13 +29,11 @@ namespace OwlEdu_Manager_Server.Controllers
                 return Ok(classes.Select(ModelMapUtils.MapBetweenClasses<Class, ClassDTO>).ToList());
             }
 
-            var classesByString = _classService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
-            var classesByNumeric = _classService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
-            var classesByDateTime = _classService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var classesByString = await _classService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var classesByNumeric = await _classService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var classesByDateTime = await _classService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "Id");
 
-            await Task.WhenAll(classesByString, classesByNumeric, classesByDateTime);
-
-            var res = classesByString.Result.Concat(classesByNumeric.Result).Concat(classesByDateTime.Result).DistinctBy(t => t.Id).Select(ModelMapUtils.MapBetweenClasses<Class, ClassDTO>).ToList();
+            var res = classesByString.Concat(classesByNumeric).Concat(classesByDateTime).DistinctBy(t => t.Id).Select(ModelMapUtils.MapBetweenClasses<Class, ClassDTO>).ToList();
             return Ok(res);
         }
         //GET: api/Class/{id}

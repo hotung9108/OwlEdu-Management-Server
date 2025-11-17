@@ -28,12 +28,10 @@ namespace OwlEdu_Manager_Server.Controllers
                 return Ok(attendances.Select(t => ModelMapUtils.MapBetweenClasses<Attendance, AttendanceDTO>(t)).ToList());
             }
 
-            var attendancesByString = _attendanceService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "ScheduleId", "StudentId");
-            var attendancesByNumeric = _attendanceService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "ScheduleId", "StudentId");
+            var attendancesByString = await _attendanceService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "ScheduleId", "StudentId");
+            var attendancesByNumeric = await _attendanceService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "ScheduleId", "StudentId");
 
-            await Task.WhenAll(attendancesByString, attendancesByNumeric);
-
-            var res = attendancesByString.Result.Concat(attendancesByNumeric.Result).DistinctBy(t => new {t.ScheduleId, t.StudentId}).Select(t => ModelMapUtils.MapBetweenClasses<Attendance, AttendanceDTO>(t)).ToList(); 
+            var res = attendancesByString.Concat(attendancesByNumeric).DistinctBy(t => new {t.ScheduleId, t.StudentId}).Select(t => ModelMapUtils.MapBetweenClasses<Attendance, AttendanceDTO>(t)).ToList(); 
 
             return Ok(res);
         }
