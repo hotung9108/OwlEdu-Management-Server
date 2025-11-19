@@ -47,7 +47,41 @@ namespace OwlEdu_Manager_Server.Controllers
 
             return Ok(exisitingCA);
         }
+        [HttpGet("class/{classId}")]
+        public async Task<IActionResult> GetClassAssignmentByClassId(string classId)
+        {
+            if (string.IsNullOrWhiteSpace(classId))
+            {
+                return BadRequest(new { Message = "Class ID is required." });
+            }
 
+            var classAssignments = await _classAssignmentService.GetClassAssignmentByClassId(classId);
+            if (!classAssignments.Any())
+            {
+                return NotFound(new { Message = "No class assignments found for the given class ID." });
+            }
+
+            var result = classAssignments.Select(t => ModelMapUtils.MapBetweenClasses<ClassAssignment, ClassAssignmentDTO>(t)).ToList();
+            return Ok(result);
+        }
+
+        [HttpGet("student/{studentId}")]
+        public async Task<IActionResult> GetClassAssignmentByStudentId(string studentId)
+        {
+            if (string.IsNullOrWhiteSpace(studentId))
+            {
+                return BadRequest(new { Message = "Student ID is required." });
+            }
+
+            var classAssignments = await _classAssignmentService.GetClassAssignmentByStudentId(studentId);
+            if (!classAssignments.Any())
+            {
+                return NotFound(new { Message = "No class assignments found for the given student ID." });
+            }
+
+            var result = classAssignments.Select(t => ModelMapUtils.MapBetweenClasses<ClassAssignment, ClassAssignmentDTO>(t)).ToList();
+            return Ok(result);
+        }
         [HttpPost]
         public async Task<IActionResult> AddClassAssignment([FromBody] ClassAssignmentDTO caDTO)
         {

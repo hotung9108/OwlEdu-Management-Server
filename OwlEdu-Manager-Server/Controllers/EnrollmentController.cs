@@ -124,5 +124,58 @@ namespace OwlEdu_Manager_Server.Controllers
             await _enrollmentService.DeleteAsync(id);
             return NoContent();
         }
+        [HttpGet("student/{studentId}")]
+        public async Task<IActionResult> GetEnrollmentByStudentId(string studentId)
+        {
+            if (string.IsNullOrWhiteSpace(studentId))
+            {
+                return BadRequest(new { Message = "Student ID is required." });
+            }
+
+            var enrollments = await _enrollmentService.GetEnrollmentByStudentId(studentId);
+            if (!enrollments.Any())
+            {
+                return NotFound(new { Message = "No enrollments found for the given student ID." });
+            }
+
+            var result = enrollments.Select(e => ModelMapUtils.MapBetweenClasses<Enrollment, EnrollmentDTO>(e)).ToList();
+            return Ok(result);
+        }
+
+        [HttpGet("course/{courseId}")]
+        public async Task<IActionResult> GetEnrollmentByCourseId(string courseId)
+        {
+            if (string.IsNullOrWhiteSpace(courseId))
+            {
+                return BadRequest(new { Message = "Course ID is required." });
+            }
+
+            var enrollments = await _enrollmentService.GetEnrollmentByCourseId(courseId);
+            if (!enrollments.Any())
+            {
+                return NotFound(new { Message = "No enrollments found for the given course ID." });
+            }
+
+            var result = enrollments.Select(e => ModelMapUtils.MapBetweenClasses<Enrollment, EnrollmentDTO>(e)).ToList();
+            return Ok(result);
+        }
+
+        [HttpGet("student/{studentId}/course/{courseId}")]
+        public async Task<IActionResult> GetEnrollmentByStudentIdCourseId(string studentId, string courseId)
+        {
+            if (string.IsNullOrWhiteSpace(studentId) || string.IsNullOrWhiteSpace(courseId))
+            {
+                return BadRequest(new { Message = "Student ID and Course ID are required." });
+            }
+
+            var enrollment = await _enrollmentService.GetEnrollmentByStudentIdCourseId(studentId, courseId);
+            if (enrollment == null)
+            {
+                return NotFound(new { Message = "No enrollment found for the given student ID and course ID." });
+            }
+
+            var result = ModelMapUtils.MapBetweenClasses<Enrollment, EnrollmentDTO>(enrollment);
+            return Ok(result);
+        }
     }
 }

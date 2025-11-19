@@ -8,7 +8,6 @@ namespace OwlEdu_Manager_Server.Services
         public ClassAssignmentService(EnglishCenterManagementContext context) : base(context)
         {
         }
-
         public async Task<ClassAssignment> GetClassAssignmentByClassIdStudentId(string classId, string studentId)
         {
             return await _dbSet.AsNoTracking().Where(t => t.ClassId == classId && t.StudentId == studentId).FirstOrDefaultAsync();
@@ -22,6 +21,14 @@ namespace OwlEdu_Manager_Server.Services
                 _dbSet.Remove(entity);
                 await _context.SaveChangesAsync();
             }
+        public async Task<IEnumerable<ClassAssignment>> GetClassAssignmentByClassId(string classId)
+        {
+            return await _dbSet.AsNoTracking().Where(t => t.ClassId == classId).ToListAsync();
+        }
+
+        public async Task<IEnumerable<ClassAssignment>> GetClassAssignmentByStudentId(string studentId)
+        {
+            return await _dbSet.AsNoTracking().Where(t => t.StudentId == studentId).ToListAsync();
         }
     }
 }
