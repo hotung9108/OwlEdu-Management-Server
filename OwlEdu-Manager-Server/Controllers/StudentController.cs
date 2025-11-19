@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using OwlEdu_Manager_Server.DTOs;
 using OwlEdu_Manager_Server.Models;
 using OwlEdu_Manager_Server.Services;
+using OwlEdu_Manager_Server.Utils;
+using static Microsoft.Extensions.Logging.EventSource.LoggingEventSource;
 
 namespace OwlEdu_Manager_Server.Controllers
 {
@@ -19,18 +21,37 @@ namespace OwlEdu_Manager_Server.Controllers
             _accountService = accountService;
         }
         [HttpGet]
-        public async Task<IActionResult> GetAllStudents([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetAllStudents([FromQuery] string keyword = "", [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
-            var students = await _studentService.GetAllAsync(pageNumber, pageSize, "Id");
-            var studentResponses = students.Select(student => new StudentResponse
+            //var students = await _studentService.GetAllAsync(pageNumber, pageSize, "Id");
+            //var studentResponses = students.Select(student => new StudentResponse
+            //{
+            //    Id = student.Id,
+            //    FullName = student.FullName,
+            //    PhoneNumber = student.PhoneNumber,
+            //    Address = student.Address,
+            //    Gender = student.Gender
+            //});
+            //return Ok(studentResponses);
+
+            if (string.IsNullOrWhiteSpace(keyword))
             {
-                Id = student.Id,
-                FullName = student.FullName,
-                PhoneNumber = student.PhoneNumber,
-                Address = student.Address,
-                Gender = student.Gender
-            });
-            return Ok(studentResponses);
+                var students = await _studentService.GetAllAsync(pageNumber, pageSize, "Id");
+                return Ok(students.Select(ModelMapUtils.MapBetweenClasses<Student, StudentResponse>).ToList());
+            }
+
+            var studentByString = await _studentService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var studentByNumeric = await _studentService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var studentByDateTime = await _studentService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "Id");
+
+            var res = studentByString
+                .Concat(studentByNumeric)
+                .Concat(studentByDateTime)
+                .DistinctBy(t => t.Id)
+                .Select(ModelMapUtils.MapBetweenClasses<Student, StudentResponse>)
+                .ToList();
+
+            return Ok(res);
         }
         [HttpGet("{id}")]
         public async Task<IActionResult> GetStudentById(string id)
