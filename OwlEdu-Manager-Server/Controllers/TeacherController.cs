@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using OwlEdu_Manager_Server.DTOs;
 using OwlEdu_Manager_Server.Models;
 using OwlEdu_Manager_Server.Services;
+using OwlEdu_Manager_Server.Utils;
 
 namespace OwlEdu_Manager_Server.Controllers
 {
@@ -20,21 +21,39 @@ namespace OwlEdu_Manager_Server.Controllers
             _accountService = accountService;
         }
         [HttpGet]
-        public async Task<IActionResult> GetAllTeachers([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetAllTeachers([FromQuery] string keyword = "", [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
-            var teachers = await _teacherService.GetAllAsync(pageNumber, pageSize, "Id");
-            var teacherResponses = teachers.Select(teacher => new TeacherResponse
-            {
-                Id = teacher.Id,
-                FullName = teacher.FullName,
-                Specialization = teacher.Specialization,
-                Qualification = teacher.Qualification,
-                PhoneNumber = teacher.PhoneNumber,
-                Address = teacher.Address,
-                Gender = teacher.Gender
+            //var teachers = await _teacherService.GetAllAsync(pageNumber, pageSize, "Id");
+            //var teacherResponses = teachers.Select(teacher => new TeacherResponse
+            //{
+            //    Id = teacher.Id,
+            //    FullName = teacher.FullName,
+            //    Specialization = teacher.Specialization,
+            //    Qualification = teacher.Qualification,
+            //    PhoneNumber = teacher.PhoneNumber,
+            //    Address = teacher.Address,
+            //    Gender = teacher.Gender
 
-            });
-            return Ok(teacherResponses);
+            //});
+            //return Ok(teacherResponses);
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                var teachers = await _teacherService.GetAllAsync(pageNumber, pageSize, "Id");
+                return Ok(teachers.Select(ModelMapUtils.MapBetweenClasses<Teacher, TeacherResponse>).ToList());
+            }
+
+            var teacherByString = await _teacherService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var teacherByNumeric = await _teacherService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var teacherByDateTime = await _teacherService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "Id");
+
+            var res = teacherByString
+                .Concat(teacherByNumeric)
+                .Concat(teacherByDateTime)
+                .DistinctBy(t => t.Id)
+                .Select(ModelMapUtils.MapBetweenClasses<Teacher, TeacherResponse>)
+                .ToList();
+
+            return Ok(res);
         }
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTeacherById(string id)
