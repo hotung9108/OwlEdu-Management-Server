@@ -131,7 +131,7 @@ namespace OwlEdu_Manager_Server.Controllers
             var enrollments = await _enrollmentService.GetEnrollmentByStudentId(studentId);
             if (!enrollments.Any())
             {
-                return NotFound(new { Message = "No enrollments found for the given student ID." });
+                return NoContent();
             }
 
             var result = enrollments.Select(e => ModelMapUtils.MapBetweenClasses<Enrollment, EnrollmentDTO>(e)).ToList();
@@ -149,7 +149,7 @@ namespace OwlEdu_Manager_Server.Controllers
             var enrollments = await _enrollmentService.GetEnrollmentByCourseId(courseId);
             if (!enrollments.Any())
             {
-                return NotFound(new { Message = "No enrollments found for the given course ID." });
+                return NoContent();
             }
 
             var result = enrollments.Select(e => ModelMapUtils.MapBetweenClasses<Enrollment, EnrollmentDTO>(e)).ToList();
@@ -167,7 +167,7 @@ namespace OwlEdu_Manager_Server.Controllers
             var enrollment = await _enrollmentService.GetEnrollmentByStudentIdCourseId(studentId, courseId);
             if (enrollment == null)
             {
-                return NotFound(new { Message = "No enrollment found for the given student ID and course ID." });
+                return NoContent();
             }
 
             var result = ModelMapUtils.MapBetweenClasses<Enrollment, EnrollmentDTO>(enrollment);
