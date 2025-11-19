@@ -94,7 +94,7 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new { Message = "Class assignment not found." });
             }
 
-            await _classAssignmentService.DeleteAsync(existingCa);
+            await _classAssignmentService.DeleteClassAssigment(classId, studentId);
 
             return NoContent();
         }

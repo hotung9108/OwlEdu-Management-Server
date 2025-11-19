@@ -117,7 +117,7 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new { Message = "Course not found." });
             }
 
-            await _courseService.DeleteAsync(existingCourse);
+            await _courseService.DeleteAsync(id);
             return NoContent();
         }
     }

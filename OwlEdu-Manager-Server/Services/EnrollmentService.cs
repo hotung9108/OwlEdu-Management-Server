@@ -6,6 +6,7 @@ namespace OwlEdu_Manager_Server.Services
     {
         public EnrollmentService(EnglishCenterManagementContext context) : base(context)
         {
+
         }
     }
 }

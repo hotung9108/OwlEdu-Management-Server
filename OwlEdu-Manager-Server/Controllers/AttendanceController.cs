@@ -93,7 +93,7 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new { Message = "Attendance not found." });
             }
 
-            await _attendanceService.DeleteAsync(existingAttendance);
+            await _attendanceService.DeleteAttendance(scheduleId, studentId);
             return NoContent();
         }
     }

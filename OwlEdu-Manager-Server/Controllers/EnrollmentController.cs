@@ -63,7 +63,7 @@ namespace OwlEdu_Manager_Server.Controllers
 
             var enrollments = await _enrollmentService.GetAllAsync(-1, -1, "Id");
 
-            if (enrollments == null)
+            if (enrollments.Count() == 0)
             {
                 enrollment.Id = "DK" + DateTime.UtcNow.ToString("ddMMyyyy") + "0000";
             }
@@ -84,7 +84,7 @@ namespace OwlEdu_Manager_Server.Controllers
 
             await _enrollmentService.AddAsync(enrollment);
 
-            return CreatedAtAction(nameof(GetEnrollmentById), enrollment.Id, ModelMapUtils.MapBetweenClasses<Enrollment, EnrollmentDTO>(enrollment));
+            return CreatedAtAction(nameof(GetEnrollmentById), new { id = enrollment.Id }, ModelMapUtils.MapBetweenClasses<Enrollment, EnrollmentDTO>(enrollment));
         }
 
         [HttpPut("{id}")]
@@ -102,9 +102,13 @@ namespace OwlEdu_Manager_Server.Controllers
             }
 
             enrollmentDTO.Id = id;
-            var enrollment = ModelMapUtils.MapBetweenClasses<EnrollmentDTO, Enrollment>(enrollmentDTO);
+            existingEnrollment.StudentId = enrollmentDTO.StudentId;
+            existingEnrollment.CourseId = enrollmentDTO.CourseId;
+            existingEnrollment.EnrollmentDate = enrollmentDTO.EnrollmentDate;
+            existingEnrollment.Status = enrollmentDTO.Status;
+            existingEnrollment.CreatedBy = enrollmentDTO.CreatedBy;
 
-            await _enrollmentService.UpdateAsync(enrollment);
+            await _enrollmentService.UpdateAsync(existingEnrollment);
             return NoContent();
         }
 
@@ -117,7 +121,7 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new { Message = "Enrollment not found." });
             }
 
-            await _enrollmentService.DeleteAsync(existingEnrollment);
+            await _enrollmentService.DeleteAsync(id);
             return NoContent();
         }
     }
