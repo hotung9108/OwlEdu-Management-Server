@@ -107,7 +107,7 @@ namespace OwlEdu_Manager_Server.Services
                 }
                 return false;
             });
-            return filtered.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+            return filtered;
         }
 
 
@@ -135,7 +135,7 @@ namespace OwlEdu_Manager_Server.Services
                 }
                 return false;
             });
-            return filtered.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+            return filtered;
         }
         public async Task<IEnumerable<T>> GetByDateTimeKeywordAsync(string keyword, int pageNumber, int pageSize, params string[] orderByProperties)
         {
@@ -171,7 +171,7 @@ namespace OwlEdu_Manager_Server.Services
                 }
                 return false;
             });
-            return filtered.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+            return filtered;
         }
 
         //public Task<IEnumerable<T>> GetByKeywordAsync(string keyword, int pageNumber, int pageSize)
