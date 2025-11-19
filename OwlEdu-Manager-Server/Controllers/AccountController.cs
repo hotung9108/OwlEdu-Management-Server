@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using OwlEdu_Manager_Server.DTOs;
 using OwlEdu_Manager_Server.Models;
 using OwlEdu_Manager_Server.Services;
+using OwlEdu_Manager_Server.Utils;
 
 namespace OwlEdu_Manager_Server.Controllers
 {
@@ -21,21 +22,26 @@ namespace OwlEdu_Manager_Server.Controllers
             _studentService = studentService;
         }
         [HttpGet]
-        public async Task<IActionResult> GetAllAccounts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetAllAccounts([FromQuery] string keyword = "", [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
-            var accounts = await _accountService.GetAllAsync(pageNumber, pageSize, "Id");
-            var accountResponses = accounts.Select(account => new AccountResponse
+            if (string.IsNullOrWhiteSpace(keyword))
             {
-                Id = account.Id,
-                Username = account.Username,
-                Avatar = account.Avatar,
-                Role = account.Role,
-                Status = account.Status,
-                Email = account.Email,
-                CreatedAt = account.CreatedAt,
-                UpdateAt = account.UpdateAt
-            });
-            return Ok(accountResponses);
+                var accounts = await _accountService.GetAllAsync(pageNumber, pageSize, "Id");
+                return Ok(accounts.Select(ModelMapUtils.MapBetweenClasses<Account, AccountResponse>).ToList());
+            }
+
+            var accountByString = await _accountService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var accountByNumeric = await _accountService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var accountByDateTime = await _accountService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "Id");
+
+            var res = accountByString
+                .Concat(accountByNumeric)
+                .Concat(accountByDateTime)
+                .DistinctBy(t => t.Id)
+                .Select(ModelMapUtils.MapBetweenClasses<Account, AccountResponse>)
+                .ToList();
+
+            return Ok(res);
         }
         //[HttpGet("{id}")]
         //public async Task<IActionResult> GetAccountById(string id)
