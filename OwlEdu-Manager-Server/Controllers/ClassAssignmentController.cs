@@ -28,10 +28,33 @@ namespace OwlEdu_Manager_Server.Controllers
                 return Ok(classAssignment.Select(t => ModelMapUtils.MapBetweenClasses<ClassAssignment, ClassAssignmentDTO>(t)).ToList());
             }
 
-            var classAssignmentByString = await _classAssignmentService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "ClassId", "StudentId");
-            var classAssignmentByDateTime = await _classAssignmentService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "ClassId", "StudentId");
+            var keywords = keyword.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-            var res = classAssignmentByString.Concat(classAssignmentByDateTime).DistinctBy(t => new { t.StudentId, t.ClassId }).Select(t => ModelMapUtils.MapBetweenClasses<ClassAssignment, ClassAssignmentDTO>(t)).ToList();
+            IEnumerable<ClassAssignment> finalResult = null;
+
+            foreach (var key in keywords)
+            {
+                // Tìm theo từng loại
+                var byStr = await _classAssignmentService.GetByStringKeywordAsync(key, -1, pageSize, "ClassId", "StudentId");
+                var byDate = await _classAssignmentService.GetByDateTimeKeywordAsync(key, -1, pageSize, "ClassId", "StudentId");
+
+                // Ghép kết quả của TỪ khóa hiện tại
+                var unionForCurrentKeyword = byStr
+                    .Concat(byDate)
+                    .DistinctBy(t => new { t.StudentId, t.ClassId });
+
+                // Lần đầu → gán luôn
+                if (finalResult == null)
+                    finalResult = unionForCurrentKeyword;
+                else
+                    // Giao nhau để chỉ giữ các item match “mọi keyword”
+                    finalResult = finalResult.Intersect(unionForCurrentKeyword);
+            }
+
+            // Map sang DTO
+            var res = finalResult.Select(t => ModelMapUtils.MapBetweenClasses<ClassAssignment, ClassAssignmentDTO>(t)).ToList();
+
+            if (res == null) res = new List<ClassAssignmentDTO>();
 
             return Ok(res);
         }
@@ -104,17 +127,16 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new { Message = "Invalid class assignment data." });
             }
 
-            var existingCa = await GetClassAssignmentById(classId, studentId);
+            var existingCa = await _classAssignmentService.GetClassAssignmentByClassIdStudentId(classId, studentId);
             if (existingCa == null)
             {
                 return BadRequest(new { Message = "Class assignment not found." });
             }
 
-            caDTO.ClassId = classId;
-            caDTO.StudentId = studentId;
-            var ca = ModelMapUtils.MapBetweenClasses<ClassAssignmentDTO, ClassAssignment>(caDTO);
+            existingCa.AssignedDate = caDTO.AssignedDate;
+            existingCa.Status = caDTO.Status;
 
-            await _classAssignmentService.UpdateAsync(ca);
+            await _classAssignmentService.UpdateAsync(existingCa);
 
             return NoContent();
         }

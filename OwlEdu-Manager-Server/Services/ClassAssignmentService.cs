@@ -21,6 +21,7 @@ namespace OwlEdu_Manager_Server.Services
                 _dbSet.Remove(entity);
                 await _context.SaveChangesAsync();
             }
+        }
         public async Task<IEnumerable<ClassAssignment>> GetClassAssignmentByClassId(string classId)
         {
             return await _dbSet.AsNoTracking().Where(t => t.ClassId == classId).ToListAsync();

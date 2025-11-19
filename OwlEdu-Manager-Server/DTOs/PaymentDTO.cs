@@ -20,10 +20,5 @@ namespace OwlEdu_Manager_Server.DTOs
 
         public string? Status { get; set; }
 
-        public virtual Enrollment? Enrollment { get; set; }
-
-        public virtual Account? FeeCollector { get; set; }
-
-        public virtual Account? Payer { get; set; }
     }
 }

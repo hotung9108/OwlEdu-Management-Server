@@ -28,12 +28,36 @@ namespace OwlEdu_Manager_Server.Controllers
                 var classes = await _classService.GetAllAsync(pageNumber, pageSize, "Id");
                 return Ok(classes.Select(ModelMapUtils.MapBetweenClasses<Class, ClassDTO>).ToList());
             }
+            var keywords = keyword.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-            var classesByString = await _classService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
-            var classesByNumeric = await _classService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
-            var classesByDateTime = await _classService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            IEnumerable<Class> finalResult = null;
 
-            var res = classesByString.Concat(classesByNumeric).Concat(classesByDateTime).DistinctBy(t => t.Id).Select(ModelMapUtils.MapBetweenClasses<Class, ClassDTO>).ToList();
+            foreach (var key in keywords)
+            {
+                // Tìm theo từng loại
+                var byStr = await _classService.GetByStringKeywordAsync(key, -1, pageSize, "Id");
+                var byNum = await _classService.GetByNumericKeywordAsync(key, -1, pageSize, "Id");
+                var byDate = await _classService.GetByDateTimeKeywordAsync(key, -1, pageSize, "Id");
+
+                // Ghép kết quả của TỪ khóa hiện tại
+                var unionForCurrentKeyword = byStr
+                    .Concat(byNum)
+                    .Concat(byDate)
+                    .DistinctBy(t => t.Id);
+
+                // Lần đầu → gán luôn
+                if (finalResult == null)
+                    finalResult = unionForCurrentKeyword;
+                else
+                    // Giao nhau để chỉ giữ các item match “mọi keyword”
+                    finalResult = finalResult.Intersect(unionForCurrentKeyword);
+            }
+
+            // Map sang DTO
+            var res = finalResult.Select(ModelMapUtils.MapBetweenClasses<Class, ClassDTO>).ToList();
+
+            if (res == null) res = new List<ClassDTO>();
+
             return Ok(res);
         }
         //GET: api/Class/{id}
@@ -98,10 +122,17 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new {Message = "Class not found." });
             }
 
-            classDTO.Id = id;
-            var _class = ModelMapUtils.MapBetweenClasses<ClassDTO, Class>(classDTO);
+            existingClass.CourseId = classDTO.CourseId;
+            existingClass.Status = classDTO.Status;
+            existingClass.Name = classDTO.Name;
+            existingClass.Require = classDTO.Require;
+            existingClass.Target = classDTO.Target;
+            existingClass.MaxStudents = classDTO.MaxStudents;
+            existingClass.StartDate = classDTO.StartDate;
+            existingClass.EndDate = classDTO.EndDate;
+            existingClass.TeacherId = classDTO.TeacherId;
 
-            await _classService.UpdateAsync(_class);
+            await _classService.UpdateAsync(existingClass);
             return NoContent();
         }
         //DELETE: api/Class/{id}

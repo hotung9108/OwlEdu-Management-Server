@@ -25,14 +25,38 @@ namespace OwlEdu_Manager_Server.Controllers
             if (keyword.Trim() == "")
             {
                 var enrollments = await _enrollmentService.GetAllAsync(pageNumber, pageSize, "Id");
-                return Ok(enrollments);
+                return Ok(enrollments.Select(t => ModelMapUtils.MapBetweenClasses<Enrollment, EnrollmentDTO>(t)).ToList());
             }
 
-            var enrollmentByString = await _enrollmentService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
-            var enrollmentByNumeric = await _enrollmentService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
-            var enrollmentByDateTime = await _enrollmentService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var keywords = keyword.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-            var res = enrollmentByString.Concat(enrollmentByString).DistinctBy(t => t.Id).Select(t => ModelMapUtils.MapBetweenClasses<Enrollment, EnrollmentDTO>(t)).ToList();
+            IEnumerable<Enrollment> finalResult = null;
+
+            foreach (var key in keywords)
+            {
+                // Tìm theo từng loại
+                var byStr = await _enrollmentService.GetByStringKeywordAsync(key, -1, pageSize, "Id");
+                var byNum = await _enrollmentService.GetByNumericKeywordAsync(key, -1, pageSize, "Id");
+                var byDate = await _enrollmentService.GetByDateTimeKeywordAsync(key, -1, pageSize, "Id");
+
+                // Ghép kết quả của TỪ khóa hiện tại
+                var unionForCurrentKeyword = byStr
+                    .Concat(byNum)
+                    .Concat(byDate)
+                    .DistinctBy(t => t.Id);
+
+                // Lần đầu → gán luôn
+                if (finalResult == null)
+                    finalResult = unionForCurrentKeyword;
+                else
+                    // Giao nhau để chỉ giữ các item match “mọi keyword”
+                    finalResult = finalResult.Intersect(unionForCurrentKeyword);
+            }
+
+            // Map sang DTO
+            var res = finalResult.Select(t => ModelMapUtils.MapBetweenClasses<Enrollment, EnrollmentDTO>(t)).ToList();
+
+            if (res == null) res = new List<EnrollmentDTO>();
 
             return Ok(res);
         }
@@ -101,7 +125,6 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new { Message = "Enrollment not found." });
             }
 
-            enrollmentDTO.Id = id;
             existingEnrollment.StudentId = enrollmentDTO.StudentId;
             existingEnrollment.CourseId = enrollmentDTO.CourseId;
             existingEnrollment.EnrollmentDate = enrollmentDTO.EnrollmentDate;
