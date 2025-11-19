@@ -55,6 +55,10 @@ namespace OwlEdu_Manager_Server.Controllers
 
             // Map sang DTO
             var res = finalResult.Select(ModelMapUtils.MapBetweenClasses<Class, ClassDTO>).ToList();
+            if (pageNumber != -1)
+            {
+                res = finalResult.Skip((pageNumber - 1) * pageSize).Take(pageSize).Select(ModelMapUtils.MapBetweenClasses<Class, ClassDTO>).ToList();
+            }
 
             if (res == null) res = new List<ClassDTO>();
 
@@ -85,7 +89,7 @@ namespace OwlEdu_Manager_Server.Controllers
 
             var classes = await _classService.GetAllAsync(-1, -1, "Id");
 
-            if (classes == null)
+            if (classes.Count() == 0)
             {
                 _class.Id = "LH000000";
             }

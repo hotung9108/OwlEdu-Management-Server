@@ -54,6 +54,10 @@ namespace OwlEdu_Manager_Server.Controllers
 
             // Map sang DTO
             var res = finalResult.Select(t => ModelMapUtils.MapBetweenClasses<Course, CourseDTO>(t)).ToList();
+            if (pageNumber != -1)
+            {
+                res = finalResult.Skip((pageNumber - 1) * pageSize).Take(pageSize).Select(t => ModelMapUtils.MapBetweenClasses<Course, CourseDTO>(t)).ToList();
+            }
 
             if (res == null) res = new List<CourseDTO>();
 
@@ -86,7 +90,7 @@ namespace OwlEdu_Manager_Server.Controllers
 
             var courses = await _courseService.GetAllAsync(-1, -1, "Id");
 
-            if (courses == null)
+            if (courses.Count() == 0)
             {
                 course.Id = "KH000";
             }
@@ -107,7 +111,7 @@ namespace OwlEdu_Manager_Server.Controllers
 
             await _courseService.AddAsync(course);
 
-            return CreatedAtAction(nameof(GetCourseById), course.Id, ModelMapUtils.MapBetweenClasses<Course, CourseDTO>(course));
+            return CreatedAtAction(nameof(GetCourseById), new { id = course.Id }, ModelMapUtils.MapBetweenClasses<Course, CourseDTO>(course));
         }
 
         [HttpPut("{id}")]

@@ -53,6 +53,10 @@ namespace OwlEdu_Manager_Server.Controllers
 
             // Map sang DTO
             var res = finalResult.Select(t => ModelMapUtils.MapBetweenClasses<ClassAssignment, ClassAssignmentDTO>(t)).ToList();
+            if (pageNumber != -1)
+            {
+                res = finalResult.Skip((pageNumber - 1) * pageSize).Take(pageSize).Select(t => ModelMapUtils.MapBetweenClasses<ClassAssignment, ClassAssignmentDTO>(t)).ToList();
+            }
 
             if (res == null) res = new List<ClassAssignmentDTO>();
 

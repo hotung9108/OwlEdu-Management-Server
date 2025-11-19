@@ -54,6 +54,10 @@ namespace OwlEdu_Manager_Server.Controllers
 
             // Map sang DTO
             var res = finalResult.Select(t => ModelMapUtils.MapBetweenClasses<Payment, PaymentDTO>(t)).ToList();
+            if (pageNumber != -1)
+            {
+                res = finalResult.Skip((pageNumber - 1) * pageSize).Take(pageSize).Select(t => ModelMapUtils.MapBetweenClasses<Payment, PaymentDTO>(t)).ToList();
+            }
 
             if (res == null) res = new List<PaymentDTO>();
 
@@ -74,6 +78,20 @@ namespace OwlEdu_Manager_Server.Controllers
             return Ok(res);
         }
 
+        [HttpGet("enrollment/{enrollmentId}")]
+        public async Task<IActionResult> GetPaymentByEnrollmentId(string enrollmentId)
+        {
+            var existingPayment = await _paymentService.GetPayementByEnrollmentId(enrollmentId);
+            if (existingPayment == null)
+            {
+                return BadRequest(new { Message = "Payment not found." });
+            }
+
+            var res = ModelMapUtils.MapBetweenClasses<Payment, PaymentDTO>(existingPayment);
+
+            return Ok(res);
+        }
+
         [HttpPost]
         public async Task<IActionResult> AddPayment([FromBody] PaymentDTO paymentDTO)
         {
@@ -86,7 +104,7 @@ namespace OwlEdu_Manager_Server.Controllers
             
             var allPayments = await _paymentService.GetAllAsync(-1, -1, "Id");
 
-            if (allPayments == null)
+            if (allPayments.Count() == 0)
             {
                 payment.Id = "HD" + DateTime.UtcNow.ToString("ddMMyyyy") + "0000";
             }
@@ -124,7 +142,6 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new { Message = "Payment not found." });
             }
 
-            existingPayment.Amount = paymentDTO.Amount;
             existingPayment.PaymentDate = paymentDTO.PaymentDate;
             existingPayment.FeeCollectorId = paymentDTO.FeeCollectorId;
             existingPayment.PayerId = paymentDTO.PayerId;
