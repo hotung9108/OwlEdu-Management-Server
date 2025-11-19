@@ -25,7 +25,7 @@ namespace OwlEdu_Manager_Server.Services
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var token = new JwtSecurityToken(
                 claims: claims,
-                expires: DateTime.UtcNow.AddHours(2),
+                expires: DateTime.UtcNow.AddHours(10),
                 signingCredentials: creds);
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
