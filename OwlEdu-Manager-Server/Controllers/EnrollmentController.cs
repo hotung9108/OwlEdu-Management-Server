@@ -13,10 +13,16 @@ namespace OwlEdu_Manager_Server.Controllers
     public class EnrollmentController : ControllerBase
     {
         private readonly EnrollmentService _enrollmentService;
+        private readonly PaymentService _paymentService;
+        private readonly CourseService _courseService;
+        private readonly StudentService _studentService;
 
-        public EnrollmentController (EnrollmentService enrollmentService)
+        public EnrollmentController (EnrollmentService enrollmentService, PaymentService paymentService, CourseService courseService, StudentService studentService)
         {
             _enrollmentService = enrollmentService;
+            _paymentService = paymentService;
+            _courseService = courseService;
+            _studentService = studentService;
         }
 
         [HttpGet]
@@ -55,6 +61,10 @@ namespace OwlEdu_Manager_Server.Controllers
 
             // Map sang DTO
             var res = finalResult.Select(t => ModelMapUtils.MapBetweenClasses<Enrollment, EnrollmentDTO>(t)).ToList();
+            if (pageNumber != -1)
+            {
+                res = finalResult.Skip((pageNumber - 1) * pageSize).Take(pageSize).Select(t => ModelMapUtils.MapBetweenClasses<Enrollment, EnrollmentDTO>(t)).ToList();
+            }
 
             if (res == null) res = new List<EnrollmentDTO>();
 
@@ -84,6 +94,7 @@ namespace OwlEdu_Manager_Server.Controllers
             }
 
             var enrollment = ModelMapUtils.MapBetweenClasses<EnrollmentDTO, Enrollment>(enrollmentDTO);
+            enrollment.Status = "active";
 
             var enrollments = await _enrollmentService.GetAllAsync(-1, -1, "Id");
 
@@ -108,6 +119,45 @@ namespace OwlEdu_Manager_Server.Controllers
 
             await _enrollmentService.AddAsync(enrollment);
 
+            var course = await _courseService.GetByIdAsync(enrollment.CourseId);
+
+            var student = await _studentService.GetByIdAsync(enrollment.StudentId);
+
+            var payment = new Payment
+            {
+                Id = "",
+                EnrollmentId = enrollment.Id,
+                Amount = course.Fee,
+                PaymentDate = null,
+                FeeCollectorId = null,
+                PayerId = student.AccountId,
+                Method = null,
+                Status = "pending"
+            };
+
+            var allPayments = await _paymentService.GetAllAsync(-1, -1, "Id");
+
+            if (allPayments.Count() == 0)
+            {
+                payment.Id = "HD" + DateTime.UtcNow.ToString("ddMMyyyy") + "0000";
+            }
+            else
+            {
+                var last = allPayments.Last();
+
+                var lastIdNumber = int.Parse(last.Id.Substring(10));
+
+                var newIdNumber = lastIdNumber + 1;
+
+                string newId = "HD" + DateTime.UtcNow.ToString("ddMMyyyy");
+
+                for (int i = 0; i < 4 - newIdNumber.ToString().Length; i++) newId += "0";
+
+                payment.Id = newId + newIdNumber.ToString();
+            }
+
+            await _paymentService.AddAsync(payment);
+
             return CreatedAtAction(nameof(GetEnrollmentById), new { id = enrollment.Id }, ModelMapUtils.MapBetweenClasses<Enrollment, EnrollmentDTO>(enrollment));
         }
 
@@ -130,6 +180,18 @@ namespace OwlEdu_Manager_Server.Controllers
             existingEnrollment.EnrollmentDate = enrollmentDTO.EnrollmentDate;
             existingEnrollment.Status = enrollmentDTO.Status;
             existingEnrollment.CreatedBy = enrollmentDTO.CreatedBy;
+
+            if (existingEnrollment.Status == "Cancelled")
+            {
+                var existingPayment = await _paymentService.GetPayementByEnrollmentId(id);
+
+                if (existingPayment != null)
+                {
+                    existingPayment.Status = "failed";
+
+                    await _paymentService.UpdateAsync(existingPayment);
+                }
+            }
 
             await _enrollmentService.UpdateAsync(existingEnrollment);
             return NoContent();
