@@ -25,14 +25,37 @@ namespace OwlEdu_Manager_Server.Controllers
             if (keyword == "")
             {
                 var payments = await _paymentService.GetAllAsync(pageNumber, pageSize, "Id");
-                return Ok(payments);
+                return Ok(payments.Select(t => ModelMapUtils.MapBetweenClasses<Payment, PaymentDTO>(t)).ToList());
+            }
+            var keywords = keyword.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            IEnumerable<Payment> finalResult = null;
+
+            foreach (var key in keywords)
+            {
+                // Tìm theo từng loại
+                var byStr = await _paymentService.GetByStringKeywordAsync(key, -1, pageSize, "Id");
+                var byNum = await _paymentService.GetByNumericKeywordAsync(key, -1, pageSize, "Id");
+                var byTime = await _paymentService.GetByDateTimeKeywordAsync(key, -1, pageSize, "Id");
+
+                // Ghép kết quả của TỪ khóa hiện tại
+                var unionForCurrentKeyword = byStr
+                    .Concat(byNum)
+                    .Concat(byTime)
+                    .DistinctBy(t => t.Id);
+
+                // Lần đầu → gán luôn
+                if (finalResult == null)
+                    finalResult = unionForCurrentKeyword;
+                else
+                    // Giao nhau để chỉ giữ các item match “mọi keyword”
+                    finalResult = finalResult.Intersect(unionForCurrentKeyword);
             }
 
-            var paymentsByString = await _paymentService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
-            var paymentsByNumeric = await _paymentService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
-            var paymentsByDateTime = await _paymentService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            // Map sang DTO
+            var res = finalResult.Select(t => ModelMapUtils.MapBetweenClasses<Payment, PaymentDTO>(t)).ToList();
 
-            var res = paymentsByString.Concat(paymentsByNumeric).Concat(paymentsByDateTime).DistinctBy(t => t.Id).Select(t => ModelMapUtils.MapBetweenClasses<Payment, PaymentDTO>(t)).ToList();
+            if (res == null) res = new List<PaymentDTO>();
 
             return Ok(res);
         }
@@ -101,10 +124,14 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new { Message = "Payment not found." });
             }
 
-            paymentDTO.Id = id;
-            var payment = ModelMapUtils.MapBetweenClasses<PaymentDTO, Payment>(paymentDTO);
+            existingPayment.Amount = paymentDTO.Amount;
+            existingPayment.PaymentDate = paymentDTO.PaymentDate;
+            existingPayment.FeeCollectorId = paymentDTO.FeeCollectorId;
+            existingPayment.PayerId = paymentDTO.PayerId;
+            existingPayment.Method = paymentDTO.Method;
+            existingPayment.Status = paymentDTO.Status;
 
-            await _paymentService.UpdateAsync(payment);
+            await _paymentService.UpdateAsync(existingPayment);
 
             return NoContent();
         }
@@ -118,7 +145,7 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new { Message = "Payment not found." });
             }
 
-            await _paymentService.DeleteAsync(existingPayment); 
+            await _paymentService.DeleteAsync(id); 
 
             return NoContent();
         }

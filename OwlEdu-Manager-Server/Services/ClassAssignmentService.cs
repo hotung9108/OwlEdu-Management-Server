@@ -13,6 +13,15 @@ namespace OwlEdu_Manager_Server.Services
             return await _dbSet.AsNoTracking().Where(t => t.ClassId == classId && t.StudentId == studentId).FirstOrDefaultAsync();
         }
 
+        public async Task DeleteClassAssigment(string classId, string studentId)
+        {
+            var entity = await _dbSet.FindAsync(studentId, classId);
+            if (entity != null)
+            {
+                _dbSet.Remove(entity);
+                await _context.SaveChangesAsync();
+            }
+        }
         public async Task<IEnumerable<ClassAssignment>> GetClassAssignmentByClassId(string classId)
         {
             return await _dbSet.AsNoTracking().Where(t => t.ClassId == classId).ToListAsync();
