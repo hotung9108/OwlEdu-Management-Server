@@ -28,10 +28,33 @@ namespace OwlEdu_Manager_Server.Controllers
                 return Ok(attendances.Select(t => ModelMapUtils.MapBetweenClasses<Attendance, AttendanceDTO>(t)).ToList());
             }
 
-            var attendancesByString = await _attendanceService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "ScheduleId", "StudentId");
-            var attendancesByNumeric = await _attendanceService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "ScheduleId", "StudentId");
+            var keywords = keyword.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-            var res = attendancesByString.Concat(attendancesByNumeric).DistinctBy(t => new {t.ScheduleId, t.StudentId}).Select(t => ModelMapUtils.MapBetweenClasses<Attendance, AttendanceDTO>(t)).ToList(); 
+            IEnumerable<Attendance> finalResult = null;
+
+            foreach (var key in keywords)
+            {
+                // Tìm theo từng loại
+                var byStr = await _attendanceService.GetByStringKeywordAsync(key, -1, pageSize, "ScheduleId", "StudentId");
+                var byNum = await _attendanceService.GetByNumericKeywordAsync(key, -1, pageSize, "ScheduleId", "StudentId");
+
+                // Ghép kết quả của TỪ khóa hiện tại
+                var unionForCurrentKeyword = byStr
+                    .Concat(byNum)
+                    .DistinctBy(t => new { t.ScheduleId, t.StudentId });
+
+                // Lần đầu → gán luôn
+                if (finalResult == null)
+                    finalResult = unionForCurrentKeyword;
+                else
+                    // Giao nhau để chỉ giữ các item match “mọi keyword”
+                    finalResult = finalResult.Intersect(unionForCurrentKeyword);
+            }
+
+            // Map sang DTO
+            var res = finalResult.Select(t => ModelMapUtils.MapBetweenClasses<Attendance, AttendanceDTO>(t)).ToList();
+
+            if (res == null) res = new List<AttendanceDTO>();
 
             return Ok(res);
         }
@@ -78,9 +101,11 @@ namespace OwlEdu_Manager_Server.Controllers
 
             attendanceDTO.ScheduleId = scheduleId;
             attendanceDTO.StudentId = studentId;
-            var attendance = ModelMapUtils.MapBetweenClasses<AttendanceDTO, Attendance>(attendanceDTO);
+            existingAttendance.Status = attendanceDTO.Status;
+            existingAttendance.Note = attendanceDTO.Note;
+            existingAttendance.TeacherId = attendanceDTO.TeacherId;
 
-            await _attendanceService.UpdateAsync(attendance);
+            await _attendanceService.UpdateAsync(existingAttendance);
             return NoContent();
         }
 
@@ -93,7 +118,7 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new { Message = "Attendance not found." });
             }
 
-            await _attendanceService.DeleteAsync(existingAttendance);
+            await _attendanceService.DeleteAttendance(scheduleId, studentId);
             return NoContent();
         }
     }

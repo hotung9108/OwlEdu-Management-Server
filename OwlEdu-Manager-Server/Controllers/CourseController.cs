@@ -29,11 +29,34 @@ namespace OwlEdu_Manager_Server.Controllers
                 return Ok(courses.Select(t => ModelMapUtils.MapBetweenClasses<Course, CourseDTO>(t)).ToList());
             }
 
-            var coursesByString = await _courseService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
-            var coursesByNumeric = await _courseService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var keywords = keyword.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-            var res = coursesByString.Concat(coursesByNumeric).DistinctBy(t => t.Id).Select(t => ModelMapUtils.MapBetweenClasses<Course, CourseDTO>(t)).ToList();
-            
+            IEnumerable<Course> finalResult = null;
+
+            foreach (var key in keywords)
+            {
+                // Tìm theo từng loại
+                var byStr = await _courseService.GetByStringKeywordAsync(key, -1, pageSize, "Id");
+                var byNum = await _courseService.GetByNumericKeywordAsync(key, -1, pageSize, "Id");
+
+                // Ghép kết quả của TỪ khóa hiện tại
+                var unionForCurrentKeyword = byStr
+                    .Concat(byNum)
+                    .DistinctBy(t => t.Id);
+
+                // Lần đầu → gán luôn
+                if (finalResult == null)
+                    finalResult = unionForCurrentKeyword;
+                else
+                    // Giao nhau để chỉ giữ các item match “mọi keyword”
+                    finalResult = finalResult.Intersect(unionForCurrentKeyword);
+            }
+
+            // Map sang DTO
+            var res = finalResult.Select(t => ModelMapUtils.MapBetweenClasses<Course, CourseDTO>(t)).ToList();
+
+            if (res == null) res = new List<CourseDTO>();
+
             return Ok(res);
         }
 
@@ -101,10 +124,13 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new { Message = "Course not found." });
             }
 
-            courseDTO.Id = id;
-            var course = ModelMapUtils.MapBetweenClasses<CourseDTO, Course>(courseDTO);
+            existingCourse.Name = courseDTO.Name;
+            existingCourse.Description = courseDTO.Description;
+            existingCourse.Status = courseDTO.Status;
+            existingCourse.NumberOfLessons = courseDTO.NumberOfLessons;
+            existingCourse.Fee = courseDTO.Fee;
 
-            await _courseService.UpdateAsync(course);
+            await _courseService.UpdateAsync(existingCourse);
             return NoContent();
         }
 
@@ -117,7 +143,7 @@ namespace OwlEdu_Manager_Server.Controllers
                 return BadRequest(new { Message = "Course not found." });
             }
 
-            await _courseService.DeleteAsync(existingCourse);
+            await _courseService.DeleteAsync(id);
             return NoContent();
         }
     }
