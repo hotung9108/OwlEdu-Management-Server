@@ -181,7 +181,7 @@ namespace OwlEdu_Manager_Server.Controllers
             existingEnrollment.Status = enrollmentDTO.Status;
             existingEnrollment.CreatedBy = enrollmentDTO.CreatedBy;
 
-            if (existingEnrollment.Status == "Cancelled")
+            if (existingEnrollment.Status == "cancelled")
             {
                 var existingPayment = await _paymentService.GetPayementByEnrollmentId(id);
 
