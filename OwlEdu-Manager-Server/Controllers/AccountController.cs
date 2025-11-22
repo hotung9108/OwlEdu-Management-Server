@@ -1,55 +1,207 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using OwlEdu_Manager_Server.DTOs;
 using OwlEdu_Manager_Server.Models;
 using OwlEdu_Manager_Server.Services;
+using OwlEdu_Manager_Server.Utils;
 
 namespace OwlEdu_Manager_Server.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
-    public class AccountController :ControllerBase
+    public class AccountController :Controller
     {
         private readonly AccountService _accountService;
-        public AccountController(AccountService accountService)
+        private readonly StudentService _studentService;
+        private readonly TeacherService _teacherService;
+        public AccountController(AccountService accountService, StudentService studentService, TeacherService teacherService)
         {
             _accountService = accountService;
+            _teacherService = teacherService;
+            _studentService = studentService;
         }
-        // GET: api/Account
         [HttpGet]
-        public async Task<IActionResult> GetAllAccounts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetAllAccounts([FromQuery] string keyword = "", [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
-            var accounts = await _accountService.GetAllAsync(pageNumber, pageSize);
-            return Ok(accounts);
-        }
-        // GET: api/Account/{id}
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetAccountById(string id)
-        {
-            var account = await _accountService.GetByIdAsync(id);
-            if (account == null)
+            if (string.IsNullOrWhiteSpace(keyword))
             {
-                return NotFound(new { Message = "Account not found." });
+                var accounts = await _accountService.GetAllAsync(pageNumber, pageSize, "Id");
+                return Ok(accounts.Select(ModelMapUtils.MapBetweenClasses<Account, AccountResponse>).ToList());
             }
-            return Ok(account);
+
+            var accountByString = await _accountService.GetByStringKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var accountByNumeric = await _accountService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize, "Id");
+            var accountByDateTime = await _accountService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize, "Id");
+
+            var res = accountByString
+                .Concat(accountByNumeric)
+                .Concat(accountByDateTime)
+                .DistinctBy(t => t.Id)
+                .Select(ModelMapUtils.MapBetweenClasses<Account, AccountResponse>)
+                .ToList();
+
+            return Ok(res);
         }
-        // POST: api/Account
+        //[HttpGet("{id}")]
+        //public async Task<IActionResult> GetAccountById(string id)
+        //{
+        //    var account = await _accountService.GetByIdAsync(id);
+        //    if (account == null)
+        //    {
+        //        return NotFound(new { Message = "Account not found." });
+        //    }
+        //    var accountResponse = new AccountResponse
+        //    {
+        //        Id = account.Id,
+        //        Username = account.Username,
+        //        Avatar = account.Avatar,
+        //        Role = account.Role,
+        //        Status = account.Status,
+        //        Email = account.Email,
+        //        CreatedAt = account.CreatedAt,
+        //        UpdateAt = account.UpdateAt
+        //    };
+
+        //    return Ok(account);
+        //}
         [HttpPost]
-        public async Task<IActionResult> AddAccount([FromBody] Account account)
+        public async Task<IActionResult> AddAccount([FromBody] AccountRequest accountRequest)
         {
-            if (account == null)
+            if (accountRequest == null)
+            {
+                return BadRequest(new { Message = "Account data is required." });
+            }
+            string baseUsername;
+            if (accountRequest.Role?.ToLower() == "student" &&  accountRequest.StudentRequest != null)
+            {
+                baseUsername = string.Join("", accountRequest.StudentRequest.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(word => word[0])).ToLower();
+            }
+            else if(accountRequest.Role?.ToLower() == "teacher"  && accountRequest.TeacherRequest != null){
+                baseUsername = string.Join("", accountRequest.TeacherRequest.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(word => word[0])).ToLower();
+            }
+            else
+            {
+                baseUsername = accountRequest.Username;
+            }
+            string username = baseUsername;
+            int suffix = 1;
+
+            while (await _accountService.FindAsync(a => a.Username == username, 1, 1) is { } accounts && accounts.Any())
+            {
+                username = $"{baseUsername}{suffix}";
+                suffix++;
+            }
+            string newAccountId = "U" + new string('0', 9);
+            var existingAccounts = await _accountService.FindAsync(
+                a => a.Id.StartsWith("U"), 1, int.MaxValue);
+            int maxAccountSequence = existingAccounts.Select(a => int.TryParse(a.Id.Substring(1), out var num) ? num : 0).DefaultIfEmpty(0).Max();
+            newAccountId = $"U{(maxAccountSequence + 1):D9}";
+            var newAccount = new Account
+            {
+                Id = newAccountId,
+                Username = username,
+                Password = accountRequest.Password,
+                Avatar = accountRequest.Avatar,
+                Role = accountRequest.Role,
+                Status = accountRequest.Status,
+                Email = accountRequest.Email,
+                CreatedAt = DateTime.UtcNow,
+                UpdateAt = DateTime.UtcNow
+            };
+
+            
+            if (accountRequest.Role?.ToLower() == "student" && accountRequest.StudentRequest != null)
+            {
+                string currentDate = DateTime.UtcNow.ToString("ddMMyyyy");
+                var existingStudents = await _studentService.FindAsync(
+                    s => s.Id.StartsWith($"HV{currentDate}"), 1, int.MaxValue);
+                int maxStudentSequence = existingStudents.Select(s => int.TryParse(s.Id.Substring(10), out var num) ? num : 0).DefaultIfEmpty(0).Max();
+                string newStudentId = $"HV{currentDate}{(maxStudentSequence + 1):D3}";
+
+                var newStudent = new Student
+                {
+                    Id = newStudentId,
+                    AccountId = newAccount.Id,
+                    FullName = accountRequest.StudentRequest.FullName,
+                    BirthDate = accountRequest.StudentRequest.BirthDate,
+                    PhoneNumber = accountRequest.StudentRequest.PhoneNumber,
+                    Address = accountRequest.StudentRequest.Address,
+                    Gender = accountRequest.StudentRequest.Gender
+                };
+                //newAccount.Students.Add(newStudent);
+                await _accountService.AddAsync(newAccount);
+                await _studentService.AddAsync(newStudent);
+            }
+            else if (accountRequest.Role?.ToLower() == "teacher" && accountRequest.TeacherRequest != null)
+            {
+                string currentDate = DateTime.UtcNow.ToString("ddMMyyyy");
+                var existingTeachers = await _teacherService.FindAsync(s => s.Id.StartsWith($"GV{currentDate}"), 1, int.MaxValue);
+                int maxTeacherSequence = existingTeachers.Select(s => int.TryParse(s.Id.Substring(10), out var num) ? num : 0).DefaultIfEmpty(0).Max();
+                string newTeacherId = $"GV{currentDate}{(maxTeacherSequence + 1):D3}";
+
+                var newTeacher = new Teacher
+                {
+                    Id = newTeacherId,
+                    AccountId = newAccount.Id,
+                    FullName = accountRequest.TeacherRequest.FullName,
+                    Specialization = accountRequest.TeacherRequest.Specialization,
+                    Qualification = accountRequest.TeacherRequest.Qualification,
+                    PhoneNumber = accountRequest.TeacherRequest.PhoneNumber,
+                    Address = accountRequest.TeacherRequest.Address,
+                    Gender = accountRequest.TeacherRequest.Gender
+                };
+                //newAccount.Teachers.Add(newTeacher);
+                await _accountService.AddAsync(newAccount);
+                await _teacherService.AddAsync(newTeacher);
+            }
+            else
+            {
+                await _accountService.AddAsync(newAccount);
+
+            }
+            var accountResponse = new AccountResponse
+            {
+                Id = newAccount.Id,
+                Username = newAccount.Username,
+                Avatar = newAccount.Avatar,
+                Role = newAccount.Role,
+                Status = newAccount.Status,
+                Email = newAccount.Email,
+                CreatedAt = newAccount.CreatedAt,
+                UpdateAt = newAccount.UpdateAt
+            };
+            return CreatedAtAction(nameof(GetDetailAccountById), new { id = newAccount.Id }, accountResponse);
+        }
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateAccount(string id, [FromBody] AccountRequest accountRequest)
+        {
+            if (accountRequest == null)
             {
                 return BadRequest(new { Message = "Invalid account data." });
             }
-
-            await _accountService.AddAsync(account);
-            return CreatedAtAction(nameof(GetAccountById), new { id = account.Id }, account);
-        }
-        // PUT: api/Account/{id}
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateAccount(string id, [FromBody] Account account)
-        {
-            if (account == null || id != account.Id)
+            var existingAccount = await _accountService.GetByIdAsync(id);
+            if (existingAccount == null)
             {
-                return BadRequest(new { Message = "Invalid account data or mismatched ID." });
+                return NotFound(new { Message = "Account not found." });
+            }
+            existingAccount.Id = id;
+            existingAccount.Username = accountRequest.Username;
+            existingAccount.Password = accountRequest.Password;
+            existingAccount.Avatar = accountRequest.Avatar;
+            existingAccount.Role = accountRequest.Role;
+            existingAccount.Status = accountRequest.Status;
+            existingAccount.Email = accountRequest.Email;
+            existingAccount.UpdateAt = DateTime.UtcNow;
+            await _accountService.UpdateAsync(existingAccount);
+            return NoContent();
+        }
+        [HttpPatch("{id}")]
+        public async Task<IActionResult> UpdateAccountPartial(string id, [FromBody] AccountUpdateRequest accountRequest)
+        {
+            if (accountRequest == null)
+            {
+                return BadRequest(new { Message = "Invalid account data." });
             }
 
             var existingAccount = await _accountService.GetByIdAsync(id);
@@ -58,10 +210,38 @@ namespace OwlEdu_Manager_Server.Controllers
                 return NotFound(new { Message = "Account not found." });
             }
 
-            await _accountService.UpdateAsync(account);
+            // Cập nhật các trường được gửi trong yêu cầu
+            if (!string.IsNullOrWhiteSpace(accountRequest.Username))
+            {
+                existingAccount.Username = accountRequest.Username;
+            }
+
+            if (!string.IsNullOrWhiteSpace(accountRequest.Password))
+            {
+                existingAccount.Password = accountRequest.Password;
+            }
+
+            if (!string.IsNullOrWhiteSpace(accountRequest.Avatar))
+            {
+                existingAccount.Avatar = accountRequest.Avatar;
+            }
+
+            if (accountRequest.Status != existingAccount.Status)
+            {
+                existingAccount.Status = accountRequest.Status;
+            }
+
+            if (!string.IsNullOrWhiteSpace(accountRequest.Email))
+            {
+                existingAccount.Email = accountRequest.Email;
+            }
+
+            existingAccount.UpdateAt = DateTime.UtcNow;
+
+            await _accountService.UpdateAsync(existingAccount);
+
             return NoContent();
         }
-        // DELETE: api/Account/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAccount(string id)
         {
@@ -70,21 +250,144 @@ namespace OwlEdu_Manager_Server.Controllers
             {
                 return NotFound(new { Message = "Account not found." });
             }
-
-            await _accountService.DeleteAsync(id);
+            existingAccount.Status = !existingAccount.Status;
+            await _accountService.UpdateAsync(existingAccount);
             return NoContent();
         }
-        // GET: api/Account/search?keyword=example&pageNumber=1&pageSize=10
-        //[HttpGet("search")]
-        //public async Task<IActionResult> SearchAccounts([FromQuery] string keyword, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetDetailAccountById(string id)
+        {
+            var account = await _accountService.GetByIdAsync(id);
+            if (account == null)
+            {
+                return NotFound(new { Message = "Account not found for the given account ID." });
+            }
+
+            if (account.Role?.ToLower() == "student")
+            {
+                var student = await _studentService.GetStudentByAccountIdAsync(id);
+                if (student == null)
+                {
+                    return NotFound(new { Message = "Student not found for the given account ID." });
+                }
+                var accountResponse = new AccountDetailResponse
+                {
+                    Id = account.Id,
+                    Username = account.Username,
+                    Avatar = account.Avatar,
+                    Role = account.Role,
+                    Status = account.Status,
+                    Email = account.Email,
+                    CreatedAt = account.CreatedAt,
+                    UpdateAt = account.UpdateAt,
+                    Student = new StudentResponse
+                    {
+                        Id = student.Id,
+                        FullName = student.FullName,
+                        //BirthDate = student.BirthDate,
+                        PhoneNumber = student.PhoneNumber,
+                        Address = student.Address,
+                        Gender = student.Gender
+                    }
+                };
+
+                return Ok(accountResponse);
+            }
+            else if(account.Role?.ToLower() == "teacher")
+            {
+                var teacher = await _teacherService.GetTeacherByAccountIdAsync(id);
+                if(teacher == null)
+                {
+                    return NotFound(new { Message = "Teacher not found for given account ID." });
+                }
+                var accountResponse = new AccountDetailResponse
+                {
+                    Id = account.Id,
+                    Username = account.Username,
+                    Avatar = account.Avatar,
+                    Role = account.Role,
+                    Status = account.Status,
+                    Email = account.Email,
+                    CreatedAt = account.CreatedAt,
+                    UpdateAt = account.UpdateAt,
+                    Teacher = new TeacherResponse
+                    {
+                        Id = teacher.Id,
+                        FullName = teacher.FullName,
+                        Specialization = teacher.Specialization,
+                        Qualification = teacher.Qualification,
+                        PhoneNumber = teacher.PhoneNumber,
+                        Address = teacher.Address,
+                        Gender = teacher.Gender
+                    }
+                };
+                return Ok(accountResponse);
+            }
+            else
+            {
+                var accountResponse = new AccountResponse
+                {
+                    Id = account.Id,
+                    Username = account.Username,
+                    Avatar = account.Avatar,
+                    Role = account.Role,
+                    Status = account.Status,
+                    Email = account.Email,
+                    CreatedAt = account.CreatedAt,
+                    UpdateAt = account.UpdateAt
+                };
+                return Ok(accountResponse);
+            }
+        }
+        [HttpPatch("{id}/status")]
+        public async Task<IActionResult> UpdateAccountStatus(string id, [FromBody] UpdateAccountStatusDTO accountStatusDTO)
+        {
+            var existingAccount = await _accountService.GetByIdAsync(id);
+            if (existingAccount == null)
+            {
+                return NotFound(new { Message = "Account not found." });
+            }
+
+            existingAccount.Status = accountStatusDTO.Status;
+            existingAccount.UpdateAt = DateTime.UtcNow;
+
+            await _accountService.UpdateAsync(existingAccount);
+
+            return NoContent();
+        }
+        //[HttpGet("search/string")]
+        //public async Task<IActionResult> SearchAccountsByString([FromQuery] string keyword, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         //{
         //    if (string.IsNullOrWhiteSpace(keyword))
         //    {
         //        return BadRequest(new { Message = "Keyword cannot be empty." });
         //    }
 
-        //    var accounts = await _accountService.GetByKeywordAsync(keyword, pageNumber, pageSize);
+        //    var accounts = await _accountService.GetByStringKeywordAsync(keyword, pageNumber, pageSize);
+        //    return Ok(accounts);
+        //}
+        //[HttpGet("search/number")]
+        //public async Task<IActionResult> SearchAccountsByNumber([FromQuery] string keyword, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        //{
+        //    if (string.IsNullOrWhiteSpace(keyword))
+        //    {
+        //        return BadRequest(new { Message = "Keyword cannot be empty." });
+        //    }
+
+        //    var accounts = await _accountService.GetByNumericKeywordAsync(keyword, pageNumber, pageSize);
+        //    return Ok(accounts);
+        //}
+
+        //[HttpGet("search/datetime")]
+        //public async Task<IActionResult> SearchAccountsByDateTime([FromQuery] string keyword, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        //{
+        //    if (string.IsNullOrWhiteSpace(keyword))
+        //    {
+        //        return BadRequest(new { Message = "Keyword cannot be empty." });
+        //    }
+
+        //    var accounts = await _accountService.GetByDateTimeKeywordAsync(keyword, pageNumber, pageSize);
         //    return Ok(accounts);
         //}
     }
-}
+    }
