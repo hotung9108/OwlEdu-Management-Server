@@ -21,8 +21,7 @@ namespace OwlEdu_Manager_Server.Services
 
         public async Task<Enrollment?> GetEnrollmentByStudentIdCourseId(string studentId, string courseId)
         {
-            return await _dbSet.AsNoTracking()
-                .FirstOrDefaultAsync(e => e.StudentId == studentId && e.CourseId == courseId);
+            return await _dbSet.AsNoTracking().FirstOrDefaultAsync(e => e.StudentId == studentId && e.CourseId == courseId);
         }
     }
 }

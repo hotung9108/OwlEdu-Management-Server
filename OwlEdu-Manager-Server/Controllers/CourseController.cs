@@ -150,5 +150,21 @@ namespace OwlEdu_Manager_Server.Controllers
             await _courseService.DeleteAsync(id);
             return NoContent();
         }
+        [HttpPatch("{id}/status")]
+        public async Task<IActionResult> UpdateCourseStatus(string id, [FromBody] CourseStatusDTO courseStatusDTO)
+        {
+            if (courseStatusDTO == null)
+            {
+                return BadRequest(new { Message = "Invalid course status data." });
+            }
+            var existingCourse = await _courseService.GetByIdAsync(id);
+            if (existingCourse == null)
+            {
+                return NotFound(new { Message = "Course not found." });
+            }
+            existingCourse.Status = courseStatusDTO.Status;
+            await _courseService.UpdateAsync(existingCourse);
+            return NoContent();
+        }
     }
 }

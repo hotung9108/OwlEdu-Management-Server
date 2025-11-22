@@ -23,6 +23,19 @@
         public StudentRequest? StudentRequest { get; set; }
         public TeacherRequest? TeacherRequest { get; set; }
     }
+    public class AccountUpdateRequest
+    {
+        public string Username { get; set; } = null!;
+        public string Password { get; set; } = null!;
+        public string? Avatar { get; set; }
+        public bool Status { get; set; }
+        public string? Email { get; set; }
+        public DateTime? UpdateAt { get; set; }
+    }
+    public class UpdateAccountStatusDTO
+    {
+        public bool Status { get; set; }
+    }
     public class AccountResponse
     {
         public string Id { get; set; } = null!;

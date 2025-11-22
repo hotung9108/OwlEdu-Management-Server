@@ -96,6 +96,8 @@ namespace OwlEdu_Manager_Server.Controllers
             {
                 return BadRequest(new { Message = "Student data is required." });
             }
+
+            // Tạo username cho tài khoản
             string baseUsername = string.Join("", studentDTO.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(word => word[0])).ToLower();
             string username = baseUsername;
             int suffix = 1;
@@ -105,20 +107,14 @@ namespace OwlEdu_Manager_Server.Controllers
                 username = $"{baseUsername}{suffix}";
                 suffix++;
             }
+
+            // Tạo ID cho tài khoản
             string newAccountId = "U" + new string('0', 9);
             var existingAccounts = await _accountService.FindAsync(a => a.Id.StartsWith("U"), 1, int.MaxValue);
             int maxAccountSequence = existingAccounts.Select(a => int.TryParse(a.Id.Substring(1), out var num) ? num : 0).DefaultIfEmpty(0).Max();
             newAccountId = $"U{(maxAccountSequence + 1):D9}";
-            //string username = string.Join("", studentDTO.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(word => word[0])).ToLower();
-            string currentDate = DateTime.UtcNow.ToString("ddMMyyyy");
-            var existingStudents = await _studentService.FindAsync(
-                s => s.Id.StartsWith($"HV{currentDate}"), 1, int.MaxValue);
-            int maxStudentSequence = existingStudents
-                .Select(s => int.TryParse(s.Id.Substring(10), out var num) ? num : 0)
-                .DefaultIfEmpty(0)
-                .Max();
-            string newStudentId = $"HV{currentDate}{(maxStudentSequence + 1):D3}";
 
+            // Tạo tài khoản mới
             var newAccount = new Account
             {
                 Id = newAccountId,
@@ -129,6 +125,25 @@ namespace OwlEdu_Manager_Server.Controllers
                 CreatedAt = DateTime.UtcNow,
                 UpdateAt = DateTime.UtcNow,
             };
+
+            // Thêm tài khoản vào cơ sở dữ liệu
+            await _accountService.AddAsync(newAccount);
+
+            // Tạo ID cho sinh viên
+            string currentDate = DateTime.UtcNow.ToString("ddMMyyyy");
+            string newStudentId;
+            do
+            {
+                var existingStudents = await _studentService.FindAsync(
+                    s => s.Id.StartsWith($"HV{currentDate}"), 1, int.MaxValue);
+                int maxStudentSequence = existingStudents
+                    .Select(s => int.TryParse(s.Id.Substring(10), out var num) ? num : 0)
+                    .DefaultIfEmpty(0)
+                    .Max();
+                newStudentId = $"HV{currentDate}{(maxStudentSequence + 1):D3}";
+            } while (await _studentService.GetByIdAsync(newStudentId) != null); // Đảm bảo ID là duy nhất
+
+            // Tạo sinh viên mới
             var newStudent = new Student
             {
                 Id = newStudentId,
@@ -139,9 +154,11 @@ namespace OwlEdu_Manager_Server.Controllers
                 Address = studentDTO.Address,
                 Gender = studentDTO.Gender
             };
-            newAccount.Students.Add(newStudent);
+
+            // Thêm sinh viên vào cơ sở dữ liệu
             await _studentService.AddAsync(newStudent);
-            await _accountService.AddAsync(newAccount);
+
+            // Tạo phản hồi
             var response = new StudentDetailResponse
             {
                 Id = newStudent.Id,
@@ -150,7 +167,7 @@ namespace OwlEdu_Manager_Server.Controllers
                 Address = newStudent.Address,
                 Gender = newStudent.Gender,
                 BirthDate = newStudent.BirthDate,
-                accountResponse = newAccount != null ? new AccountResponse
+                accountResponse = new AccountResponse
                 {
                     Id = newAccount.Id,
                     Username = newAccount.Username,
@@ -160,16 +177,9 @@ namespace OwlEdu_Manager_Server.Controllers
                     Email = newAccount.Email,
                     CreatedAt = newAccount.CreatedAt,
                     UpdateAt = newAccount.UpdateAt
-                } : null
-                //AccountId = newAccount.Id,
-                //Username = newAccount.Username,
-                //Avatar = newAccount.Avatar,
-                //Role = newAccount.Role,
-                //Status = newAccount.Status,
-                //Email = newAccount.Email,
-                //CreatedAt = newAccount.CreatedAt,
-                //UpdateAt = newAccount.UpdateAt
+                }
             };
+
             return CreatedAtAction(nameof(GetStudentById), new { id = newStudent.Id }, response);
         }
         [HttpDelete("{id}")]
