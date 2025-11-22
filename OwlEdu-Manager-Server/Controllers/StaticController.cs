@@ -83,7 +83,19 @@ namespace OwlEdu_Manager_Server.Controllers
             var revenue = await _staticService.GetPendingRevenueByDateAsync(date.Value);
             return Ok(revenue);
         }
+        [HttpGet("revenue/paid/{year}")]
+        public async Task<IActionResult> GetPaidRevenueByYear(int year)
+        {
+            var revenue = await _staticService.GetPaidRevenueByYearAsync(year);
+            return Ok(new { Year = year, PaidRevenue = revenue });
+        }
 
+        [HttpGet("revenue/pending/{year}")]
+        public async Task<IActionResult> GetPendingRevenueByYear(int year)
+        {
+            var revenue = await _staticService.GetPendingRevenueByYearAsync(year);
+            return Ok(new { Year = year, PendingRevenue = revenue });
+        }
         [HttpGet("enrollments/count/by-date")]
         public async Task<IActionResult> GetEnrollmentCountByDate([FromQuery] DateTime? date)
         {
