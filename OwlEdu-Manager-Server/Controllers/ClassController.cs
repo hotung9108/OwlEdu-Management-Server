@@ -139,18 +139,22 @@ namespace OwlEdu_Manager_Server.Controllers
             await _classService.UpdateAsync(existingClass);
             return NoContent();
         }
-        //DELETE: api/Class/{id}
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteClass(string id)
+        [HttpGet("by-course/{courseId}")]
+        public async Task<IActionResult> GetClassesByCourseId(string courseId)
         {
-            var existingClass = await _classService.GetByIdAsync(id);
-            if (existingClass == null)
+            if (string.IsNullOrWhiteSpace(courseId))
             {
-                return BadRequest(new { Message = "Class not found." });
+                return BadRequest(new { Message = "Course ID cannot be empty." });
             }
 
-            await _classService.DeleteAsync(id);
-            return NoContent();
+            var classes = await _classService.GetClassesByCourseId(courseId);
+            if (!classes.Any())
+            {
+                return NotFound(new { Message = "No classes found for the given Course ID." });
+            }
+
+            var classDTOs = classes.Select(ModelMapUtils.MapBetweenClasses<Class, ClassDTO>).ToList();
+            return Ok(classDTOs);
         }
     }
 }

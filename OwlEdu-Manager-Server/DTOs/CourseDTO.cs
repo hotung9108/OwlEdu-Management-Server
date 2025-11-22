@@ -14,4 +14,8 @@
 
         public decimal? Fee { get; set; }
     }
+    public class CourseStatusDTO
+    {
+        public bool Status { get; set; }
+    }
 }

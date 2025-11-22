@@ -52,7 +52,19 @@ namespace OwlEdu_Manager_Server.Services
         {
             return await _context.Payments.Where(p => p.PaymentDate.HasValue && p.PaymentDate.Value.Year == year).SumAsync(p => p.Amount ?? 0);
         }
+        public async Task<decimal> GetPaidRevenueByYearAsync(int year)
+        {
+            return await _context.Payments
+                .Where(p => p.PaymentDate.HasValue && p.PaymentDate.Value.Year == year && p.Status == "Paid")
+                .SumAsync(p => p.Amount ?? 0);
+        }
 
+        public async Task<decimal> GetPendingRevenueByYearAsync(int year)
+        {
+            return await _context.Payments
+                .Where(p => p.PaymentDate.HasValue && p.PaymentDate.Value.Year == year && p.Status == "Pending")
+                .SumAsync(p => p.Amount ?? 0);
+        }
         public async Task<decimal> GetPaidRevenueByDateAsync(DateTime date)
         {
             var targetDate = DateOnly.FromDateTime(date);
@@ -71,12 +83,12 @@ namespace OwlEdu_Manager_Server.Services
                 .SumAsync(p => p.Amount ?? 0);
         }
 
-        public async Task<decimal> GetPendingRevenueByYearAsync(int year)
-        {
-            return await _context.Payments
-                .Where(p => p.PaymentDate.HasValue && p.PaymentDate.Value.Year == year && p.Status == "Pending")
-                .SumAsync(p => p.Amount ?? 0);
-        }
+        //public async Task<decimal> GetPendingRevenueByYearAsync(int year)
+        //{
+        //    return await _context.Payments
+        //        .Where(p => p.PaymentDate.HasValue && p.PaymentDate.Value.Year == year && p.Status == "Pending")
+        //        .SumAsync(p => p.Amount ?? 0);
+        //}
 
         public async Task<int> GetEnrollmentCountByDateAsync(DateTime date)
         {

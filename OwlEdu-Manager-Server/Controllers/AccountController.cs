@@ -196,6 +196,52 @@ namespace OwlEdu_Manager_Server.Controllers
             await _accountService.UpdateAsync(existingAccount);
             return NoContent();
         }
+        [HttpPatch("{id}")]
+        public async Task<IActionResult> UpdateAccountPartial(string id, [FromBody] AccountUpdateRequest accountRequest)
+        {
+            if (accountRequest == null)
+            {
+                return BadRequest(new { Message = "Invalid account data." });
+            }
+
+            var existingAccount = await _accountService.GetByIdAsync(id);
+            if (existingAccount == null)
+            {
+                return NotFound(new { Message = "Account not found." });
+            }
+
+            // Cập nhật các trường được gửi trong yêu cầu
+            if (!string.IsNullOrWhiteSpace(accountRequest.Username))
+            {
+                existingAccount.Username = accountRequest.Username;
+            }
+
+            if (!string.IsNullOrWhiteSpace(accountRequest.Password))
+            {
+                existingAccount.Password = accountRequest.Password;
+            }
+
+            if (!string.IsNullOrWhiteSpace(accountRequest.Avatar))
+            {
+                existingAccount.Avatar = accountRequest.Avatar;
+            }
+
+            if (accountRequest.Status != existingAccount.Status)
+            {
+                existingAccount.Status = accountRequest.Status;
+            }
+
+            if (!string.IsNullOrWhiteSpace(accountRequest.Email))
+            {
+                existingAccount.Email = accountRequest.Email;
+            }
+
+            existingAccount.UpdateAt = DateTime.UtcNow;
+
+            await _accountService.UpdateAsync(existingAccount);
+
+            return NoContent();
+        }
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAccount(string id)
         {
@@ -291,6 +337,22 @@ namespace OwlEdu_Manager_Server.Controllers
                 };
                 return Ok(accountResponse);
             }
+        }
+        [HttpPatch("{id}/status")]
+        public async Task<IActionResult> UpdateAccountStatus(string id, [FromBody] UpdateAccountStatusDTO accountStatusDTO)
+        {
+            var existingAccount = await _accountService.GetByIdAsync(id);
+            if (existingAccount == null)
+            {
+                return NotFound(new { Message = "Account not found." });
+            }
+
+            existingAccount.Status = accountStatusDTO.Status;
+            existingAccount.UpdateAt = DateTime.UtcNow;
+
+            await _accountService.UpdateAsync(existingAccount);
+
+            return NoContent();
         }
         //[HttpGet("search/string")]
         //public async Task<IActionResult> SearchAccountsByString([FromQuery] string keyword, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
