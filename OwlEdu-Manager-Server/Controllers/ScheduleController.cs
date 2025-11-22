@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿    using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using OwlEdu_Manager_Server.DTOs;
 using OwlEdu_Manager_Server.Models;
 using OwlEdu_Manager_Server.Services;
+using OwlEdu_Manager_Server.Utils;
 
 namespace OwlEdu_Manager_Server.Controllers
 {
@@ -12,10 +14,14 @@ namespace OwlEdu_Manager_Server.Controllers
     public class ScheduleController : Controller
     {
         private readonly ScheduleService _scheduleService;
+        private readonly ClassService _classService;
+        private readonly CourseService _courseService;
 
-        public ScheduleController(ScheduleService scheduleService)
+        public ScheduleController(ScheduleService scheduleService, CourseService courseService, ClassService classService)
         {
             _scheduleService = scheduleService;
+            _classService = classService;
+            _courseService = courseService;
         }
 
         [HttpGet]
@@ -162,5 +168,99 @@ namespace OwlEdu_Manager_Server.Controllers
 
             return NoContent();
         }
+
+        [HttpDelete("Class/{classId}")]
+        public async Task<IActionResult> DeleteSchedulesByClass(string classId)
+        {
+            // Lấy tất cả schedule của lớp
+            var schedules = await _scheduleService.GetSchedulesByClassIdAsync(classId);
+
+            if (!schedules.Any())
+                return NotFound(new { Message = "No schedules found for this class." });
+
+            // Xóa tất cả cùng lúc
+            _scheduleService._dbSet.RemoveRange(schedules);
+            await _scheduleService._context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        [HttpPost("Form")]
+        public async Task<IActionResult> PostScheduleForm([FromBody] ScheduleFormDTO scheduleFormDTO)
+        {
+            if (scheduleFormDTO == null)
+                return BadRequest("Invalid data");
+
+            var _class = await _classService.GetByIdAsync(scheduleFormDTO.ClassId);
+            if (_class == null) return BadRequest("Invalid data");
+
+            var course = await _courseService.GetByIdAsync(_class.CourseId);
+            int numberOfLessons = (int)course.NumberOfLessons;
+            DateOnly startDate = (DateOnly)_class.StartDate;
+            string teacherId = _class.TeacherId;
+
+            // Xóa tất cả schedule hiện có của class
+            var existingSchedules = await _scheduleService._dbSet
+                .Where(s => s.ClassId == scheduleFormDTO.ClassId)
+                .ToListAsync();
+            if (existingSchedules.Any())
+            {
+                _scheduleService._dbSet.RemoveRange(existingSchedules);
+                await _scheduleService._context.SaveChangesAsync();
+            }
+
+            // Map DaysOfWeek
+            Dictionary<char, DayOfWeek> map = new()
+    {
+        { '0', DayOfWeek.Sunday }, { '1', DayOfWeek.Monday }, { '2', DayOfWeek.Tuesday },
+        { '3', DayOfWeek.Wednesday }, { '4', DayOfWeek.Thursday }, { '5', DayOfWeek.Friday },
+        { '6', DayOfWeek.Saturday }
+    };
+            var allowedDays = scheduleFormDTO.DaysOfWeek
+                .Where(c => map.ContainsKey(c))
+                .Select(c => map[c])
+                .ToList();
+            if (!allowedDays.Any())
+                return BadRequest("DaysOfWeek is invalid");
+
+            // Lấy maxIdNumber 1 lần trước vòng lặp
+            var maxId = await _scheduleService.GetMaxScheduleIdAsync();
+            int maxIdNumber = maxId != null ? int.Parse(maxId.Substring(2)) : 0;
+
+            // Tạo schedule mới
+            List<Schedule> schedules = new();
+            DateTime current = startDate.ToDateTime(new TimeOnly(0, 0));
+            int created = 0;
+
+            while (created < numberOfLessons)
+            {
+                if (allowedDays.Contains(current.DayOfWeek))
+                {
+                    maxIdNumber++;
+                    string newId = $"BH{maxIdNumber:D9}";
+
+                    schedules.Add(new Schedule
+                    {
+                        Id = newId,
+                        ClassId = scheduleFormDTO.ClassId,
+                        Room = scheduleFormDTO.Room,
+                        TeacherId = teacherId,
+                        StartTime = scheduleFormDTO.StartTime,
+                        EndTime = scheduleFormDTO.EndTime,
+                        SessionDate = DateOnly.FromDateTime(current),
+                    });
+
+                    created++;
+                }
+                current = current.AddDays(1);
+            }
+
+            // Lưu tất cả schedule mới cùng lúc
+            _scheduleService._dbSet.AddRange(schedules);
+            await _scheduleService._context.SaveChangesAsync();
+
+            return Ok(new { Message = "Tạo lịch học thành công", Count = schedules.Count });
+        }
+
     }
 }

@@ -204,7 +204,8 @@ namespace OwlEdu_Manager_Server.Controllers
             {
                 return NotFound(new { Message = "Account not found." });
             }
-            await _accountService.DeleteAsync(id);
+            existingAccount.Status = !existingAccount.Status;
+            await _accountService.UpdateAsync(existingAccount);
             return NoContent();
         }
         [HttpGet("{id}")]

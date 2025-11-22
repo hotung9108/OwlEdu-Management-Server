@@ -152,5 +152,25 @@ namespace OwlEdu_Manager_Server.Controllers
             await _classService.DeleteAsync(id);
             return NoContent();
         }
+
+        [HttpPatch("status/{id}/{status}")]
+        public async Task<IActionResult> PatchClassStatus(string id, bool status)
+        {
+            if (id == null)
+            {
+                return BadRequest(new { Message = "Invalid class data." });
+            }
+
+            var existingClass = await _classService.GetByIdAsync(id);
+            if (existingClass == null)
+            {
+                return BadRequest(new { Message = "Class not found." });
+            }
+
+            existingClass.Status = status;
+
+            await _classService.UpdateAsync(existingClass);
+            return NoContent();
+        }
     }
 }

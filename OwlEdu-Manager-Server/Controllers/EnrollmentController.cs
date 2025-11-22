@@ -9,7 +9,7 @@ namespace OwlEdu_Manager_Server.Controllers
 {
     [Authorize]
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     public class EnrollmentController : ControllerBase
     {
         private readonly EnrollmentService _enrollmentService;
@@ -180,6 +180,37 @@ namespace OwlEdu_Manager_Server.Controllers
             existingEnrollment.EnrollmentDate = enrollmentDTO.EnrollmentDate;
             existingEnrollment.Status = enrollmentDTO.Status;
             existingEnrollment.CreatedBy = enrollmentDTO.CreatedBy;
+
+            if (existingEnrollment.Status == "cancelled")
+            {
+                var existingPayment = await _paymentService.GetPayementByEnrollmentId(id);
+
+                if (existingPayment != null)
+                {
+                    existingPayment.Status = "failed";
+
+                    await _paymentService.UpdateAsync(existingPayment);
+                }
+            }
+
+            await _enrollmentService.UpdateAsync(existingEnrollment);
+            return NoContent();
+        }
+        [HttpPut("status/{id}/{status}")]
+        public async Task<IActionResult> UpdateEnrollmentStatus(string id, string status)
+        {
+            if (id == null || status == null)
+            {
+                return BadRequest(new { Message = "Invalid enrollment data." });
+            }
+
+            var existingEnrollment = await _enrollmentService.GetByIdAsync(id);
+            if (existingEnrollment == null)
+            {
+                return BadRequest(new { Message = "Enrollment not found." });
+            }
+
+            existingEnrollment.Status = status;
 
             if (existingEnrollment.Status == "cancelled")
             {
